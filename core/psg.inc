@@ -1,0 +1,1 @@
+EXTERN write_PSG
