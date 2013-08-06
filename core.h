@@ -29,8 +29,7 @@ extern unsigned char Joy1, Joy2;
 
 // PSG
 void reset_PSG();
-void make_PSG();
-extern unsigned char *SoundBuffer;
+void make_PSG(void *udata, unsigned char *stream, int len);
 
 // VDP
 void reset_VDP();

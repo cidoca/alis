@@ -77,12 +77,6 @@ void run()
 	}
 }
 
-void fill_audio(void *udata, Uint8 *stream, int len)
-{
-	make_PSG();
-	memcpy(stream, &SoundBuffer, len);
-}
-
 int main(int argc, char **argv)
 {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
@@ -95,7 +89,7 @@ int main(int argc, char **argv)
 	wanted.format = AUDIO_U8;
 	wanted.channels = 1;
 	wanted.samples = 736 * 2;
-	wanted.callback = fill_audio;
+	wanted.callback = make_PSG;
 	wanted.userdata = NULL;
 
 	if (SDL_OpenAudio(&wanted, NULL) < 0) {

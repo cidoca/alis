@@ -119,12 +119,16 @@ PSGW2:	ret
 ; *********************
 GLOBAL make_PSG
 make_PSG:
-		pusha
+		push ebx
+		push esi
+		push edi
+		push ebp
+		mov esi, [esp+24]	; Second parameter (stream)
 
 		; Limpa o Buffer
 		mov eax, 80808080h
 		mov ecx, BUFFERSIZE / 4
-		mov edi, SoundBuffer ; mov edi, offset SoundBuffer
+		mov edi, esi
 		rep stosd
 
 		; Gera canal 1
@@ -192,11 +196,14 @@ MPS6:	mov ah, BYTE [rVol4]
 		mov ecx, BUFFERSIZE
 		mov edx, DWORD [Periodo4]
 		mov ebp, DWORD [FeedBack]
-		mov edi, SoundBuffer ; mov edi, offset SoundBuffer
+		mov edi, esi
 		call WPNoise
 		mov DWORD [Periodo4], edx
 
-MPS66:	popa
+MPS66:	pop ebp
+		pop edi
+		pop esi
+		pop ebx
 		ret
 
 ; * Gera uma linha na altura do volume
@@ -223,7 +230,7 @@ MPS66:	popa
 GLOBAL square_wave
 square_wave:
 		mov ecx, BUFFERSIZE
-		mov edi, SoundBuffer ; mov edi, offset SoundBuffer
+		mov edi, esi
 
 SW0:	jecxz SW1
 		dec ecx
@@ -393,7 +400,3 @@ Periodo1	RESD 1
 Periodo2	RESD 1
 Periodo3	RESD 1
 Periodo4	RESD 1
-
-; Buffer para o som
-GLOBAL SoundBuffer
-SoundBuffer		RESB BUFFERSIZE
