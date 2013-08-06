@@ -22,6 +22,7 @@
 
 Uint8 *keys;
 SDL_Surface *screen;
+int cpu_running = 1;
 void init_battery() {}
 
 int open_ROM(char *filename)
@@ -57,28 +58,30 @@ void get_controls()
 		Joy1 &= ~0x20;
 }
 
-void run()
+int run(void *data)
 {
-	reset_CPU();
-	reset_VDP();
-	reset_PSG();
-
 	unsigned int t, t2;
-	while (!keys[SDLK_ESCAPE]) {
+
+	SDL_PauseAudio(0);
+	while (cpu_running) {
 		t = SDL_GetTicks();
 		get_controls();
 		scan_frame();
 		write_frame(screen->pixels, screen->format->BitsPerPixel);
 		SDL_Flip(screen);
-		SDL_PumpEvents();
 		t2 = SDL_GetTicks();
 		if (t2 - t < 16)
 			SDL_Delay(16 - t2 + t);
 	}
+	SDL_PauseAudio(1);
+
+    return 1;
 }
 
 int main(int argc, char **argv)
 {
+    SDL_Event event;
+
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
 		printf("Error initializing SDL: %s\n", SDL_GetError());
 		return 0;
@@ -100,13 +103,28 @@ int main(int argc, char **argv)
 	keys = SDL_GetKeyState(NULL);
 	screen = SDL_SetVideoMode(256, 192, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
 
+    SDL_EventState(SDL_ACTIVEEVENT, SDL_IGNORE);
+    SDL_EventState(SDL_MOUSEMOTION, SDL_IGNORE);
+    SDL_EventState(SDL_MOUSEBUTTONDOWN, SDL_IGNORE);
+    SDL_EventState(SDL_MOUSEBUTTONUP, SDL_IGNORE);
+
 	ROM = (unsigned char *)malloc(64 * 16384);
 	open_ROM(argv[1]);
 
-	SDL_PauseAudio(0);
-	run();
-	SDL_PauseAudio(1);
+    reset_CPU();
+    reset_VDP();
+    reset_PSG();
 
+    SDL_Thread *thread = SDL_CreateThread(run, NULL);
+
+    while (cpu_running) {
+        if (SDL_WaitEvent(&event)) {
+            if (event.type == SDL_QUIT)
+                cpu_running = 0;
+        }
+    }
+
+	SDL_WaitThread(thread, NULL);
 	SDL_CloseAudio();
 	SDL_Quit();
 
