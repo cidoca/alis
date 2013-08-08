@@ -22,22 +22,9 @@
 
 Uint8 *keys;
 SDL_Surface *screen;
-int cpu_running = 1;
+int cpu_running = 1, audio_present = 1;
+
 void init_battery() {}
-
-int open_ROM(char *filename)
-{
-    FILE *fd = fopen(filename, "rb");
-    int size = fread(ROM, 512, 2048, fd);
-    fclose(fd);
-
-    if (size & 1)
-        memcpy(ROM, ROM + 0x200, 512 * (--size));
-
-    init_banks(size / 32);
-
-    return 1;
-}
 
 void get_controls()
 {
@@ -89,7 +76,9 @@ int run(void *data)
 {
     unsigned int t, t2;
 
-    SDL_PauseAudio(0);
+    if (audio_present)
+        SDL_PauseAudio(0);
+
     while (cpu_running) {
         t = SDL_GetTicks();
         get_controls();
@@ -100,19 +89,21 @@ int run(void *data)
         if (t2 - t < 16)
             SDL_Delay(16 - t2 + t);
     }
-    SDL_PauseAudio(1);
+
+    if (audio_present)
+        SDL_PauseAudio(1);
 
     return 1;
 }
 
-int main(int argc, char **argv)
-{
-    SDL_Event event;
-
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
+void init_SDL() {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0) {
         printf("Error initializing SDL: %s\n", SDL_GetError());
-        return 0;
+        exit(-1);
     }
+
+    keys = SDL_GetKeyState(NULL);
+    screen = SDL_SetVideoMode(256, 192, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
 
     SDL_AudioSpec wanted;
     wanted.freq = 44160;
@@ -121,27 +112,51 @@ int main(int argc, char **argv)
     wanted.samples = 736 * 2;
     wanted.callback = make_PSG;
     wanted.userdata = NULL;
-
     if (SDL_OpenAudio(&wanted, NULL) < 0) {
-        printf("Couldn't open audio: %s\n", SDL_GetError());
-        return 0;
+        audio_present = 0;
+        printf("Could not open audio: %s\n", SDL_GetError());
     }
-
-    keys = SDL_GetKeyState(NULL);
-    screen = SDL_SetVideoMode(256, 192, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
 
     SDL_EventState(SDL_ACTIVEEVENT, SDL_IGNORE);
     SDL_EventState(SDL_MOUSEMOTION, SDL_IGNORE);
     SDL_EventState(SDL_MOUSEBUTTONDOWN, SDL_IGNORE);
     SDL_EventState(SDL_MOUSEBUTTONUP, SDL_IGNORE);
+}
+
+void open_ROM(char *filename)
+{
+    FILE *fd = fopen(filename, "rb");
+    if (fd == NULL) {
+        printf("** Error opening rom %s\n", filename);
+        exit(-1);
+    }
 
     ROM = (unsigned char *)malloc(64 * 16384);
-    open_ROM(argv[1]);
+    int size = fread(ROM, 512, 2048, fd);
+    fclose(fd);
+    if (size & 1)
+        memcpy(ROM, ROM + 0x200, 512 * (--size));
 
+    // Initialize core engine
+    init_banks(size / 32);
     reset_CPU();
     reset_VDP();
     reset_PSG();
+}
 
+int main(int argc, char **argv)
+{
+    if (argc < 2) {
+        printf("Alis - SEGA Master System emulator\n");
+        printf("usage: %s <rom-file>\n\n", argv[0]);
+        return 0;
+    }
+
+    open_ROM(argv[1]);
+
+    init_SDL();
+
+    SDL_Event event;
     SDL_Thread *thread = SDL_CreateThread(run, NULL);
 
     while (cpu_running) {
