@@ -17,14 +17,45 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 #include <SDL/SDL.h>
 #include "core.h"
 
 Uint8 *keys;
 SDL_Surface *screen;
+char rom_filename[FILENAME_MAX];
 int cpu_running = 1, audio_present = 1;
 
-void init_battery() {}
+void init_battery()
+{
+    FILE *fd;
+    char filename[FILENAME_MAX];
+
+    strcpy(filename, rom_filename);
+    strcat(filename, ".srm");
+    fd = fopen(filename, "rb");
+    if (fd) {
+        int unused = fread(RAM_EX, 1, 32768, fd);
+        fclose(fd);
+    }
+}
+
+void save_battery()
+{
+    FILE *fd;
+    char filename[FILENAME_MAX];
+
+    if (!battery)
+        return;
+
+    strcpy(filename, rom_filename);
+    strcat(filename, ".srm");
+    fd = fopen(filename, "wb");
+    if (fd) {
+        fwrite(RAM_EX, 1, 32768, fd);
+        fclose(fd);
+    }
+}
 
 void get_controls()
 {
@@ -93,6 +124,8 @@ int run(void *data)
     if (audio_present)
         SDL_PauseAudio(1);
 
+    save_battery();
+
     return 1;
 }
 
@@ -130,6 +163,11 @@ void open_ROM(char *filename)
         printf("** Error opening rom %s\n", filename);
         exit(-1);
     }
+
+    strcpy(rom_filename, filename);
+    char *ext = strrchr(rom_filename, '.');
+    if (ext)
+        *ext = 0;
 
     ROM = (unsigned char *)malloc(64 * 16384);
     int size = fread(ROM, 512, 2048, fd);
