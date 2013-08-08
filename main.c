@@ -41,9 +41,11 @@ int open_ROM(char *filename)
 
 void get_controls()
 {
-    Joy1 = 0xFF;
-    Joy2 = 0xFF;
+    static int pause = 0;
 
+    Joy1 = Joy2 = 0xFF;
+
+    // Joystick 1
     if (keys[SDLK_UP])
         Joy1 &= ~0x01;
     if (keys[SDLK_DOWN])
@@ -56,6 +58,31 @@ void get_controls()
         Joy1 &= ~0x10;
     if (keys[SDLK_x])
         Joy1 &= ~0x20;
+
+    // Joystick 2
+    if (keys[SDLK_KP5])
+        Joy1 &= ~0x40;
+    if (keys[SDLK_KP2])
+        Joy1 &= ~0x80;
+    if (keys[SDLK_KP1])
+        Joy2 &= ~0x01;
+    if (keys[SDLK_KP3])
+        Joy2 &= ~0x02;
+    if (keys[SDLK_n])
+        Joy2 &= ~0x04;
+    if (keys[SDLK_m])
+        Joy2 &= ~0x08;
+
+    // Reset and pause button
+    if (keys[SDLK_ESCAPE])
+        Joy2 &= ~0x10;
+    if (keys[SDLK_SPACE]) {
+        if (!pause) {
+            pause = 1;
+            int_NMI();
+        }
+    } else
+        pause = 0;
 }
 
 int run(void *data)
