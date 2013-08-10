@@ -1,0 +1,125 @@
+2013-08-05  Cidorvan Leite  <cidorvan@gmail.com>
+
+    * PSG: Removed temporary sound buffer to avoid memory copy.
+
+2013-08-03  Cidorvan Leite  <cidorvan@gmail.com>
+
+    Ported to SDL and NASM.
+
+2004-04-23  Cidorvan Leite <cidorvan@gmail.com>
+
+    * UI: Syncing frame rate by time instead of sound.
+
+2004-01-04  Cidorvan Leite <cidorvan@gmail.com>
+
+    * CPU: Fixed opcodes RR r; RL r; RRC r; RLC r.
+
+2003-08-10  Cidorvan Leite <cidorvan@gmail.com>
+
+    * IO: Fixed reading port 7Eh.
+
+2003-07-29  Cidorvan Leite <cidorvan@gmail.com>
+
+    * VDP: Fixed line interrupt. 
+
+2003-07-28  Cidorvan Leite <cidorvan@gmail.com>
+
+    * CPU: Fixed opcodes LD BC, (nn); LD DE, (nn); LD HL, (nn); LD SP, (nn);
+           Fixed invalid use of RETI instruction.
+
+2003-02-16  Cidorvan Leite <cidorvan@gmail.com>
+
+    * VDP: Added left shift for sprites.
+
+2003-02-03  Cidorvan Leite <cidorvan@gmail.com>
+
+    * IO: Fixed reading ports DEh and DFh.
+
+2003-01-19  Cidorvan Leite <cidorvan@gmail.com>
+
+    * UI: Added support to save and load game.
+
+2003-01-18  Cidorvan Leite <cidorvan@gmail.com>
+
+    * PSG: Added last audio channel (white noise);
+    * UI: Fixed button pause.
+
+2003-01-11  Cidorvan Leite <cidorvan@gmail.com>
+
+    * CPU: Fixed opcodes DEC IX*, DEC IY*; INC IX*; INC IY*.
+
+2003-01-09  Cidorvan Leite <cidorvan@gmail.com>
+
+    * IO: Fixed write operation on RAM select register.
+
+2003-01-05  Cidorvan Leite <cidorvan@gmail.com>
+
+    * PSG: Added audio channels (only square waves).
+
+2003-01-01  Cidorvan Leite <cidorvan@gmail.com>
+
+    * BANKS: Fixed write operation on second page register;
+    * UI: Added support to 15, 24 and 32 bits display color.
+
+2002-12-31  Cidorvan Leite <cidorvan@gmail.com>
+
+    * VDP: Rendering sprites in the right order.
+
+2002-12-29  Cidorvan Leite <cidorvan@gmail.com>
+
+    * CPU: Added opcode INIR.
+
+2002-12-28  Cidorvan Leite <cidorvan@gmail.com>
+
+    * CPU: Fixed opcodes LD (n), IY; INC IX*; DEC IX*.
+
+2002-12-25  Cidorvan Leite <cidorvan@gmail.com>
+
+    * CPU: Fixed opcodes ADD HL, ss; ADC HL, ss; ADD IX, ss; ADD IY, ss; SBC HL, ss; RLA; RRA; SRL; BIT; SLL; ADC A, (IX/IY+d).
+
+2002-12-24  Cidorvan Leite <cidorvan@gmail.com>
+
+    * CPU: Fixed opcode CPL.
+
+2002-12-22  Cidorvan Leite <cidorvan@gmail.com>
+
+    * BANKS: Optimized read and write operations;
+    * CPU: Fixed opcodes LD IX, (n) e LD IY, (n);
+           Added opcode SLL;
+    * VPD: Added sprite layer;
+
+2002-12-21  Cidorvan Leite <cidorvan@gmail.com>
+
+    * IO: Fixed read and write operation in port BEh;
+    * CPU: Fixed opcode AND;
+    * UI: Fixed save game battery;
+          Fixed reading ROM with invalid size.
+
+2002-12-17  Cidorvan Leite <cidorvan@gmail.com>
+
+    * UI: Added support for saving battery.
+
+2002-12-15  Cidorvan Leite <cidorvan@gmail.com>
+
+    * CPU: Added opcodes LD IX*, r; LD IY*, r; LD r, IX*; LD r, IY*; INC IX*; INC IY*; DEC IX*; DEC IY*; OTDR;
+           Fixed opcodes INC IX/IY e DEC IX/IY;
+           Leaving HALT mode with interruptions;
+    * BANKS: Optimized access to memory;
+             Fixed write in 16bit page registers.
+
+2002-12-14  Cidorvan Leite <cidorvan@gmail.com>
+
+    * IO: Using American console mode;
+    * VDP: Added palette to render the background;
+    * CPU: Added opcodes CPI, CPIR, CPD, CPDR and LDD;
+           Fixed opcode DAA.
+
+2002-12-13  Cidorvan Leite <cidorvan@gmail.com>
+
+    * VDP: Fixed background vertical flip;
+    * CPU: Fixed opcodes RL and RR.
+    * VDP: Added background vertical and horizontal scroll.
+
+2002-12-10  Cidorvan Leite <cidorvan@gmail.com>
+
+    Initial release
