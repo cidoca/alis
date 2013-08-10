@@ -18,22 +18,26 @@
 
 // Banks
 void init_banks(int ROM_size);
-extern unsigned char battery, *ROM, RAM[], RAM_EX[];
+extern unsigned char battery, *pBank0, *pBank1, *pBank2, *pBank2ROM;
+extern unsigned char *ROM, RAM[], RAM_EX[];
 
 // CPU
 void reset_CPU();
 void int_NMI();
+extern unsigned char Flag;
 
 // IO
-extern unsigned char Joy1, Joy2;
+extern unsigned char Nationalization, Joy1, Joy2;
 
 // PSG
 void reset_PSG();
 void make_PSG(void *udata, unsigned char *stream, int len);
+extern unsigned char rVol1;
 
 // VDP
 void reset_VDP();
 void scan_frame();
+extern unsigned char VDPStatus;
 
 // Surface
 void write_frame(void *surface, int bpp);
