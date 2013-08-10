@@ -12,7 +12,7 @@ $(TARGET): $(LIBCORE) $(OBJECTS)
 	@echo Linking executable $@
 	@$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBCORE) $(LIBS)
 
-.c.o:
+main.o: main.c core.h icon.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 

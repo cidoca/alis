@@ -20,6 +20,7 @@
 #include <string.h>
 #include <SDL/SDL.h>
 #include "core.h"
+#include "icon.h"
 
 #define CHECK_KEY(key, port, value) if (keys[key]) port &= ~value;
 #define CHECK_STATE_KEY(key, state, action) if (keys[key] != state) { state = keys[key]; if (state) action; }
@@ -186,6 +187,11 @@ void init_SDL() {
         printf("Error initializing SDL: %s\n", SDL_GetError());
         exit(-1);
     }
+
+    SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(icon_pixels, 64, 64, 16, 64 * 2, 0xF800, 0x7E0, 0x1F, 0x0);
+    SDL_SetColorKey(icon, SDL_SRCCOLORKEY, 0xF800);
+    SDL_WM_SetIcon(icon, NULL);
+    SDL_WM_SetCaption("Alis", "Alis");
 
     keys = SDL_GetKeyState(NULL);
     screen = SDL_SetVideoMode(256, 192, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
