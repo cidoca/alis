@@ -25,7 +25,25 @@ write_frame:
         push esi
         push edi
 
-        mov esi, VideoBuffer
+        test BYTE [VDPR], 020h
+        jz NR
+
+        mov esi, VideoBuffer + 16
+        mov edi, VideoBuffer
+        mov dh, 192
+NL:     mov dl, 8
+NB:     mov ecx, 16
+        rep movsd
+        mov ax, [edi-4]
+        mov [edi-2], ax
+        sub esi, 2
+        dec dl
+        jnz NB
+        add esi, 16
+        dec dh
+        jnz NL
+
+NR:     mov esi, VideoBuffer
         mov edi, [esp+16]       ; First parameter (surface)
 
         mov al, BYTE [esp+20]   ; Second parameter (bpp)
