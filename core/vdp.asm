@@ -49,7 +49,7 @@ scan_frame:
 
         ; Limpa o frame
         xor eax, eax
-        mov ecx, (256 * 192 * 2) / 4
+        mov ecx, 256 * 192
         mov edi, VideoBuffer ; mov edi, offset VideoBuffer
         rep stosd
 
@@ -155,7 +155,7 @@ RL000:  shr eax, 3
         add esi, eax
 
         mov eax, DWORD [ScanLine]
-        shl eax, 9
+        shl eax, 10
         mov edi, VideoBuffer ; mov edi, offset VideoBuffer
         add edi, eax
 
@@ -168,7 +168,7 @@ RL000:  shr eax, 3
         jb RL01
 
 RL00:   movzx eax, BYTE [VDPR+8]
-        shl eax, 1
+        shl eax, 2
         mov DWORD [scrollx], eax
 
 RL01:   movzx ebx, BYTE [VDPR+9]
@@ -198,32 +198,32 @@ RL_00:  test BYTE [esi-1], 10h  ; Tile na frente do sprite (renderiza depois)
         mov eax, DWORD [pal]
         mov al, BYTE [CRAM+eax]
         and al, 3Fh
-        mov ax, [palette+eax*2]
+        mov eax, [palette+eax*4]
         mov edx, DWORD [scrollx]
-        mov [edi+edx], ax
-        add edx, 2
-        and edx, 1FFh
-        mov [edi+edx], ax
-        add edx, 2
-        and edx, 1FFh
-        mov [edi+edx], ax
-        add edx, 2
-        and edx, 1FFh
-        mov [edi+edx], ax
-        add edx, 2
-        and edx, 1FFh
-        mov [edi+edx], ax
-        add edx, 2
-        and edx, 1FFh
-        mov [edi+edx], ax
-        add edx, 2
-        and edx, 1FFh
-        mov [edi+edx], ax
-        add edx, 2
-        and edx, 1FFh
-        mov [edi+edx], ax
-        add edx, 2
-        and edx, 1FFh
+        mov [edi+edx], eax
+        add edx, 4
+        and edx, 3FFh
+        mov [edi+edx], eax
+        add edx, 4
+        and edx, 3FFh
+        mov [edi+edx], eax
+        add edx, 4
+        and edx, 3FFh
+        mov [edi+edx], eax
+        add edx, 4
+        and edx, 3FFh
+        mov [edi+edx], eax
+        add edx, 4
+        and edx, 3FFh
+        mov [edi+edx], eax
+        add edx, 4
+        and edx, 3FFh
+        mov [edi+edx], eax
+        add edx, 4
+        and edx, 3FFh
+        mov [edi+edx], eax
+        add edx, 4
+        and edx, 3FFh
         mov DWORD [scrollx], edx
         dec ch
         jnz RL0
@@ -257,11 +257,11 @@ RL1:    mov eax, ebp
         mov edx, DWORD [pal]
         mov al, BYTE [CRAM+eax+edx]
         and al, 3Fh
-        mov ax, [palette+eax*2]
+        mov eax, [palette+eax*4]
         mov edx, DWORD [scrollx]
-        mov [edi+edx], ax
-        add edx, 2
-        and edx, 1FFh
+        mov [edi+edx], eax
+        add edx, 4
+        and edx, 3FFh
         mov DWORD [scrollx], edx
         dec cl
         jnz RL1
@@ -284,11 +284,11 @@ RL3:    mov eax, ebp
         mov edx, DWORD [pal]
         mov al, BYTE [CRAM+eax+edx]
         and al, 3Fh
-        mov ax, [palette+eax*2]
+        mov eax, [palette+eax*4]
         mov edx, DWORD [scrollx]
-        mov [edi+edx], ax
-        add edx, 2
-        and edx, 1FFh
+        mov [edi+edx], eax
+        add edx, 4
+        and edx, 3FFh
         mov DWORD [scrollx], edx
         dec cl
         jnz RL3
@@ -315,7 +315,7 @@ RBL000: shr eax, 3
         add esi, eax
 
         mov eax, DWORD [ScanLine]
-        shl eax, 9
+        shl eax, 10
         mov edi, VideoBuffer ; mov edi, offset VideoBuffer
         add edi, eax
 
@@ -328,7 +328,7 @@ RBL000: shr eax, 3
         jb RBL01
 
 RBL00:  movzx eax, BYTE [VDPR+8]
-        shl eax, 1
+        shl eax, 2
         mov DWORD [scrollx], eax
 
 RBL01:  movzx ebx, BYTE [VDPR+9]
@@ -345,8 +345,8 @@ RBL_0:  movzx edx, WORD [esi]
 
         test BYTE [esi-1], 10h  ; Tile na frente do sprite (renderiza depois)
         jnz RBL_00
-        add DWORD [scrollx], 8*2
-        and DWORD [scrollx], 1FFh
+        add DWORD [scrollx], 8*4
+        and DWORD [scrollx], 3FFh
         dec ch
         jnz RBL0
         ret
@@ -385,11 +385,11 @@ RBL1:   mov eax, ebp
 RBL13:  mov edx, DWORD [pal]
         mov al, BYTE [CRAM+eax+edx]
         and al, 3Fh
-        mov ax, [palette+eax*2]
+        mov eax, [palette+eax*4]
         mov edx, DWORD [scrollx]
-        mov [edi+edx], ax
-RBL14:  add edx, 2
-        and edx, 1FFh
+        mov [edi+edx], eax
+RBL14:  add edx, 4
+        and edx, 3FFh
         mov DWORD [scrollx], edx
         dec cl
         jnz RBL1
@@ -415,11 +415,11 @@ RBL3:   mov eax, ebp
 RBL4:   mov edx, DWORD [pal]
         mov al, BYTE [CRAM+eax+edx]
         and al, 3Fh
-        mov ax, [palette+eax*2]
+        mov eax, [palette+eax*4]
         mov edx, DWORD [scrollx]
-        mov [edi+edx], ax
-RBL5:   add edx, 2
-        and edx, 1FFh
+        mov [edi+edx], eax
+RBL5:   add edx, 4
+        and edx, 3FFh
         mov DWORD [scrollx], edx
         dec cl
         jnz RBL3
@@ -453,7 +453,7 @@ RSL00:  mov DWORD [sb], 0
         mov DWORD [sb], 2000h
 
 RSL01:  mov eax, DWORD [ScanLine]
-        shl eax, 9
+        shl eax, 10
         mov edi, VideoBuffer ; mov edi, offset VideoBuffer
         add edi, eax
         mov DWORD [vb], edi
@@ -478,7 +478,7 @@ RSL0:   mov al, BYTE [sl]
         jz RSL02
         sub edi, 8
         and edi, 0FFh
-RSL02:  shl edi, 1
+RSL02:  shl edi, 2
         add edi, DWORD [vb]
         movzx eax, BYTE [esi+ecx*2+129]
         shl eax, 5
@@ -501,9 +501,9 @@ RSL3:   mov eax, ebp
         jz RSL4
         mov al, BYTE [CRAM+eax+16]
         and al, 3Fh
-        mov ax, [palette+eax*2]
-        mov [edi], ax
-RSL4:   add edi, 2
+        mov eax, [palette+eax*4]
+        mov [edi], eax
+RSL4:   add edi, 4
         dec bl
         jnz RSL3
 
@@ -517,14 +517,14 @@ RSL2:   ret
 SECTION .data
 
 palette:
-    DW 00000h, 05000h, 0A800h, 0F800h, 002A0h, 052A0h, 0AAA0h, 0FAA0h
-    DW 00540h, 05540h, 0AD40h, 0FD40h, 007E0h, 057E0h, 0AFE0h, 0FFE0h
-    DW 0000Ah, 0500Ah, 0A80Ah, 0F80Ah, 002AAh, 052AAh, 0AAAAh, 0FAAAh
-    DW 0054Ah, 0554Ah, 0AD4Ah, 0FD4Ah, 007EAh, 057EAh, 0AFEAh, 0FFEAh
-    DW 00015h, 05015h, 0A815h, 0F815h, 002B5h, 052B5h, 0AAB5h, 0FAB5h
-    DW 00555h, 05555h, 0AD55h, 0FD55h, 007F5h, 057F5h, 0AFF5h, 0FFF5h
-    DW 0001Fh, 0501Fh, 0A81Fh, 0F81Fh, 002BFh, 052BFh, 0AABFh, 0FABFh
-    DW 0055Fh, 0555Fh, 0AD5Fh, 0FD5Fh, 007FFh, 057FFh, 0AFFFh, 0FFFFh
+    DD 0000000h, 0520000h, 0AC0000h, 0FF0000h, 0005500h, 0525500h, 0AC5500h, 0FF5500h
+    DD 000AA00h, 052AA00h, 0ACAA00h, 0FFAA00h, 000FF00h, 052FF00h, 0ACFF00h, 0FFFF00h
+    DD 0000052h, 0520052h, 0AC0052h, 0FF0052h, 0005552h, 0525552h, 0AC5552h, 0FF5552h
+    DD 000AA52h, 052AA52h, 0ACAA52h, 0FFAA52h, 000FF52h, 052FF52h, 0ACFF52h, 0FFFF52h
+    DD 00000ACh, 05200ACh, 0AC00ACh, 0FF00ACh, 00055ACh, 05255ACh, 0AC55ACh, 0FF55ACh
+    DD 000AAACh, 052AAACh, 0ACAAACh, 0FFAAACh, 000FFACh, 052FFACh, 0ACFFACh, 0FFFFACh
+    DD 00000FFh, 05200FFh, 0AC00FFh, 0FF00FFh, 00055FFh, 05255FFh, 0AC55FFh, 0FF55FFh
+    DD 000AAFFh, 052AAFFh, 0ACAAFFh, 0FFAAFFh, 000FFFFh, 052FFFFh, 0ACFFFFh, 0FFFFFFh
 
 
 SECTION .bss
@@ -558,4 +558,4 @@ CRAM    RESB 32             ; palette de cores
 VRAM    RESB 4000h          ; Memória de vídeo
 
 GLOBAL VideoBuffer
-VideoBuffer RESB 256*193*2
+VideoBuffer RESB 256*193*4
