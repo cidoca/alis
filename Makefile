@@ -4,9 +4,9 @@ COREDIR=core
 LIBCORE=$(COREDIR)/libcore.a
 
 CC=gcc
-CFLAGS=-m32 -O2
+CFLAGS=-m32 -O2 `sdl2-config --cflags`
 LDFLAGS=-m32
-LIBS=-lSDL-1.2
+LIBS=-lSDL2
 
 $(TARGET): $(LIBCORE) $(OBJECTS)
 	@echo Linking executable $@

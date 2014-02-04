@@ -1,3 +1,14 @@
+2014-02-04  Cidorvan Leite  <cidorvan@gmail.com>
+
+    * UI: Removed thread for CPU.
+          Window is now resizable.
+          Updated to SDL2.
+          Removed window icon (doesn't work with SDL2 yet).
+
+2014-01-27  Cidorvan Leite  <cidorvan@gmail.com>
+
+    * VDP: Rendering in 32bit color instead of 16bit.
+
 2013-08-05  Cidorvan Leite  <cidorvan@gmail.com>
 
     * PSG: Removed temporary sound buffer to avoid memory copy.

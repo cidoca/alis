@@ -1,5 +1,5 @@
 ; Alis, A SEGA Master System emulator
-; Copyright (C) 2002-2013 Cidorvan Leite
+; Copyright (C) 2002-2014 Cidorvan Leite
 
 ; This program is free software: you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ reset_VDP:
 
         ; Limpa registradores, palheta de cores e memória de vídeo
         mov ecx, (4+16+32+4000h)/4
-        mov edi, pRAM ; mov edi, offset pRAM
+        mov edi, pRAM
         rep stosd
 
         pop edi
@@ -45,12 +45,15 @@ reset_VDP:
 ; *****************
 GLOBAL scan_frame
 scan_frame:
-        pusha
+        push ebx
+        push esi
+        push edi
+        push ebp
 
         ; Limpa o frame
         xor eax, eax
         mov ecx, 256 * 192
-        mov edi, VideoBuffer ; mov edi, offset VideoBuffer
+        mov edi, [esp+20]		; Param buffer
         rep stosd
 
         ; Começa um novo frame
@@ -119,7 +122,10 @@ SF6:    sub BYTE [TClock], 228
         cmp DWORD [ScanLine], 262
         jb SF0
 
-        popa
+        pop ebp
+        pop edi
+        pop esi
+        pop ebx
         ret
 
 ; * Renderiza uma linha
@@ -130,7 +136,7 @@ render_background_layer:
 ;       mov eax, DWORD [ScanLine]
 ;       shr eax, 3
 ;       shl eax, 6
-;       mov esi, VRAM ; ;       mov esi, offset VRAM
+;       mov esi, VRAM
 ;       add esi, eax
 ;       movzx eax, BYTE [VDPR+2]
 ;       shl eax, 10
@@ -147,7 +153,7 @@ render_background_layer:
 
 RL000:  shr eax, 3
         shl eax, 6
-        mov esi, VRAM ; mov esi, offset VRAM
+        mov esi, VRAM
         add esi, eax
         movzx eax, BYTE [VDPR+2]
         shl eax, 10
@@ -156,7 +162,7 @@ RL000:  shr eax, 3
 
         mov eax, DWORD [ScanLine]
         shl eax, 10
-        mov edi, VideoBuffer ; mov edi, offset VideoBuffer
+        mov edi, [esp+24]			; Param buffer (after one call instruction)
         add edi, eax
 
         mov DWORD [scrollx], 0
@@ -307,7 +313,7 @@ render_background_layer2:
 
 RBL000: shr eax, 3
         shl eax, 6
-        mov esi, VRAM ; mov esi, offset VRAM
+        mov esi, VRAM
         add esi, eax
         movzx eax, BYTE [VDPR+2]
         shl eax, 10
@@ -316,7 +322,7 @@ RBL000: shr eax, 3
 
         mov eax, DWORD [ScanLine]
         shl eax, 10
-        mov edi, VideoBuffer ; mov edi, offset VideoBuffer
+        mov edi, [esp+24]			; Param buffer (after one call instruction)
         add edi, eax
 
         mov DWORD [scrollx], 0
@@ -431,7 +437,7 @@ RBL5:   add edx, 4
 ; *******************************************
 render_sprite_layer:
         xor ecx, ecx
-        mov esi, VRAM + 3F00h ; mov esi, offset VRAM + 3F00h
+        mov esi, VRAM + 3F00h
 RSLX0:  cmp BYTE [esi+ecx], 0D0h
         je RSLX1
         inc cl
@@ -454,7 +460,7 @@ RSL00:  mov DWORD [sb], 0
 
 RSL01:  mov eax, DWORD [ScanLine]
         shl eax, 10
-        mov edi, VideoBuffer ; mov edi, offset VideoBuffer
+        mov edi, [esp+24]			; Param buffer (after one call instruction)
         add edi, eax
         mov DWORD [vb], edi
 
@@ -556,6 +562,3 @@ pRAM    RESD 1              ; Ponteiro para acessar palheta de cores ou memória 
 VDPR    RESB 16             ; Registros do VDP
 CRAM    RESB 32             ; palette de cores
 VRAM    RESB 4000h          ; Memória de vídeo
-
-GLOBAL VideoBuffer
-VideoBuffer RESB 256*193*4

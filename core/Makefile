@@ -1,6 +1,6 @@
 AR=ar
 ASM=nasm
-OBJECTS=banks.o cpu.o io.o psg.o vdp.o surface.o
+OBJECTS=banks.o cpu.o io.o psg.o vdp.o
 
 libcore.a: $(OBJECTS)
 	@echo Generating static library $@

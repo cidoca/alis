@@ -1,6 +1,6 @@
 /*
   Alis, A SEGA Master System emulator
-  Copyright (C) 2002-2013 Cidorvan Leite
+  Copyright (C) 2002-2014 Cidorvan Leite
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -18,17 +18,19 @@
 
 #include <fcntl.h>
 #include <string.h>
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 #include "core.h"
-#include "icon.h"
+//#include "icon.h"
 
 #define CHECK_KEY(key, port, value) if (keys[key]) port &= ~value;
 #define CHECK_STATE_KEY(key, state, action) if (keys[key] != state) { state = keys[key]; if (state) action; }
 
 Uint8 *keys;
-SDL_Surface *screen;
+SDL_Window *win;
+SDL_Renderer *renderer;
+SDL_Texture *texture;
 char rom_filename[FILENAME_MAX];
-int cpu_running = 1, audio_present = 1;
+int audio_present = 1;
 
 void init_battery()
 {
@@ -115,105 +117,6 @@ int load_game(int slot)
     }
 }
 
-void get_controls()
-{
-    static int pause = 0;
-    static int save_slot1 = 0, save_slot2 = 0, save_slot3 = 0, save_slot4 = 0, save_slot5 = 0;
-    static int load_slot1 = 0, load_slot2 = 0, load_slot3 = 0, load_slot4 = 0, load_slot5 = 0;
-
-    Joy1 = Joy2 = 0xFF;
-
-    // Joystick 1
-    CHECK_KEY(SDLK_UP, Joy1, 0x01)
-    CHECK_KEY(SDLK_DOWN, Joy1, 0x02)
-    CHECK_KEY(SDLK_LEFT, Joy1, 0x04)
-    CHECK_KEY(SDLK_RIGHT, Joy1, 0x08)
-    CHECK_KEY(SDLK_z, Joy1, 0x10)
-    CHECK_KEY(SDLK_x, Joy1, 0x20)
-
-    // Joystick 2
-    CHECK_KEY(SDLK_KP5, Joy1, 0x40)
-    CHECK_KEY(SDLK_KP2, Joy1, 0x80)
-    CHECK_KEY(SDLK_KP1, Joy2, 0x01)
-    CHECK_KEY(SDLK_KP3, Joy2, 0x02)
-    CHECK_KEY(SDLK_n, Joy2, 0x04)
-    CHECK_KEY(SDLK_m, Joy2, 0x08)
-
-    // Reset and pause button
-    CHECK_KEY(SDLK_ESCAPE, Joy2, 0x10)
-    CHECK_STATE_KEY(SDLK_SPACE, pause, int_NMI())
-
-    // Save game
-    CHECK_STATE_KEY(SDLK_F5, save_slot1, save_game(1))
-    CHECK_STATE_KEY(SDLK_F6, save_slot2, save_game(2))
-    CHECK_STATE_KEY(SDLK_F7, save_slot3, save_game(3))
-    CHECK_STATE_KEY(SDLK_F8, save_slot4, save_game(4))
-
-    // Load game
-    CHECK_STATE_KEY(SDLK_F9, load_slot1, load_game(1))
-    CHECK_STATE_KEY(SDLK_F10, load_slot2, load_game(2))
-    CHECK_STATE_KEY(SDLK_F11, load_slot3, load_game(3))
-    CHECK_STATE_KEY(SDLK_F12, load_slot4, load_game(4))
-}
-
-int run(void *data)
-{
-    unsigned int t, t2;
-
-    if (audio_present)
-        SDL_PauseAudio(0);
-
-    while (cpu_running) {
-        t = SDL_GetTicks();
-        get_controls();
-        scan_frame();
-        write_frame(screen->pixels, screen->format->BitsPerPixel);
-        SDL_Flip(screen);
-        t2 = SDL_GetTicks();
-        if (t2 - t < 16)
-            SDL_Delay(16 - t2 + t);
-    }
-
-    if (audio_present)
-        SDL_PauseAudio(1);
-
-    save_battery();
-
-    return 1;
-}
-
-void init_SDL() {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0) {
-        printf("Error initializing SDL: %s\n", SDL_GetError());
-        exit(-1);
-    }
-
-    SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(icon_pixels, 64, 64, 16, 64 * 2, 0xF800, 0x7E0, 0x1F, 0x0);
-    SDL_SetColorKey(icon, SDL_SRCCOLORKEY, 0xF800);
-    SDL_WM_SetIcon(icon, NULL);
-    SDL_WM_SetCaption("Alis", "Alis");
-
-    keys = SDL_GetKeyState(NULL);
-    screen = SDL_SetVideoMode(256, 192, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
-
-    SDL_AudioSpec wanted;
-    wanted.freq = 44160;
-    wanted.format = AUDIO_U8;
-    wanted.channels = 1;
-    wanted.samples = 736 * 2;
-    wanted.callback = make_PSG;
-    wanted.userdata = NULL;
-    if (SDL_OpenAudio(&wanted, NULL) < 0) {
-        audio_present = 0;
-        printf("Could not open audio: %s\n", SDL_GetError());
-    }
-
-    SDL_EventState(SDL_ACTIVEEVENT, SDL_IGNORE);
-    SDL_EventState(SDL_MOUSEMOTION, SDL_IGNORE);
-    SDL_EventState(SDL_MOUSEBUTTONDOWN, SDL_IGNORE);
-    SDL_EventState(SDL_MOUSEBUTTONUP, SDL_IGNORE);
-}
-
 void open_ROM(char *filename)
 {
     int fd = open(filename, O_RDONLY);
@@ -240,6 +143,132 @@ void open_ROM(char *filename)
     reset_PSG();
 }
 
+void get_controls()
+{
+    static int pause = 0;
+    static int save_slot1 = 0, save_slot2 = 0, save_slot3 = 0, save_slot4 = 0, save_slot5 = 0;
+    static int load_slot1 = 0, load_slot2 = 0, load_slot3 = 0, load_slot4 = 0, load_slot5 = 0;
+
+    Joy1 = Joy2 = 0xFF;
+
+    // Joystick 1
+    CHECK_KEY(SDL_SCANCODE_UP, Joy1, 0x01)
+    CHECK_KEY(SDL_SCANCODE_DOWN, Joy1, 0x02)
+    CHECK_KEY(SDL_SCANCODE_LEFT, Joy1, 0x04)
+    CHECK_KEY(SDL_SCANCODE_RIGHT, Joy1, 0x08)
+    CHECK_KEY(SDL_SCANCODE_Z, Joy1, 0x10)
+    CHECK_KEY(SDL_SCANCODE_X, Joy1, 0x20)
+
+    // Joystick 2
+    CHECK_KEY(SDL_SCANCODE_KP_5, Joy1, 0x40)
+    CHECK_KEY(SDL_SCANCODE_KP_2, Joy1, 0x80)
+    CHECK_KEY(SDL_SCANCODE_KP_1, Joy2, 0x01)
+    CHECK_KEY(SDL_SCANCODE_KP_3, Joy2, 0x02)
+    CHECK_KEY(SDL_SCANCODE_N, Joy2, 0x04)
+    CHECK_KEY(SDL_SCANCODE_M, Joy2, 0x08)
+
+    // Reset and pause button
+    CHECK_KEY(SDL_SCANCODE_ESCAPE, Joy2, 0x10)
+    CHECK_STATE_KEY(SDL_SCANCODE_SPACE, pause, int_NMI())
+
+    // Save game
+    CHECK_STATE_KEY(SDL_SCANCODE_F5, save_slot1, save_game(1))
+    CHECK_STATE_KEY(SDL_SCANCODE_F6, save_slot2, save_game(2))
+    CHECK_STATE_KEY(SDL_SCANCODE_F7, save_slot3, save_game(3))
+    CHECK_STATE_KEY(SDL_SCANCODE_F8, save_slot4, save_game(4))
+
+    // Load game
+    CHECK_STATE_KEY(SDL_SCANCODE_F9, load_slot1, load_game(1))
+    CHECK_STATE_KEY(SDL_SCANCODE_F10, load_slot2, load_game(2))
+    CHECK_STATE_KEY(SDL_SCANCODE_F11, load_slot3, load_game(3))
+    CHECK_STATE_KEY(SDL_SCANCODE_F12, load_slot4, load_game(4))
+}
+
+void main_loop()
+{
+    int done = 0;
+    SDL_Event event;
+    void *buffer;
+    unsigned int t, t2, p;
+    SDL_Rect rect = {8, 0, 256, 192};
+
+    if (audio_present)
+        SDL_PauseAudio(0);
+
+    while (!done) {
+        while (SDL_PollEvent(&event))
+            if (event.type == SDL_QUIT)
+                done = 1;
+
+        t = SDL_GetTicks();
+        get_controls();
+        SDL_LockTexture(texture, NULL, &buffer, &p);
+        scan_frame(buffer);
+        SDL_UnlockTexture(texture);
+        SDL_RenderCopy(renderer, texture, VDPR & 0x20 ? &rect : NULL,  NULL);
+        SDL_RenderPresent(renderer);
+        t2 = SDL_GetTicks();
+        if (t2 - t < 16)
+            SDL_Delay(16 - t2 + t);
+    }
+
+    if (audio_present)
+        SDL_PauseAudio(1);
+
+    save_battery();
+}
+
+void init_SDL()
+{
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0) {
+        printf("Error initializing SDL: %s\n", SDL_GetError());
+        exit(-1);
+    }
+
+    // Create window and texture
+    win = SDL_CreateWindow("Alis", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 192);
+    keys = (Uint8*)SDL_GetKeyboardState(NULL);
+
+    // Define window icon
+//    SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(icon_pixels, 64, 64, 16, 64 * 2, 0xF800, 0x7E0, 0x1F, 0x0);
+//    SDL_SetWindowIcon(win, icon);
+//    SDL_FreeSurface(icon);
+
+    // Setup audio
+    SDL_AudioSpec wanted;
+    wanted.freq = 44160;
+    wanted.format = AUDIO_U8;
+    wanted.channels = 1;
+    wanted.samples = 736 * 2;
+    wanted.callback = make_PSG;
+    wanted.userdata = NULL;
+    if (SDL_OpenAudio(&wanted, NULL) < 0) {
+        audio_present = 0;
+        printf("Could not open audio: %s\n", SDL_GetError());
+    }
+
+    // Ignore keyboard and mouse events
+    SDL_EventState(SDL_KEYDOWN, SDL_IGNORE);
+    SDL_EventState(SDL_KEYUP, SDL_IGNORE);
+    SDL_EventState(SDL_TEXTINPUT, SDL_IGNORE);
+    SDL_EventState(SDL_MOUSEMOTION, SDL_IGNORE);
+    SDL_EventState(SDL_MOUSEBUTTONDOWN, SDL_IGNORE);
+    SDL_EventState(SDL_MOUSEBUTTONUP, SDL_IGNORE);
+    SDL_EventState(SDL_MOUSEWHEEL, SDL_IGNORE);
+}
+
+void deinit_SDL()
+{
+    SDL_CloseAudio();
+    SDL_DestroyTexture(texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(win);
+    SDL_Quit();
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -252,19 +281,9 @@ int main(int argc, char **argv)
 
     init_SDL();
 
-    SDL_Event event;
-    SDL_Thread *thread = SDL_CreateThread(run, NULL);
+    main_loop();
 
-    while (cpu_running) {
-        if (SDL_WaitEvent(&event)) {
-            if (event.type == SDL_QUIT)
-                cpu_running = 0;
-        }
-    }
-
-    SDL_WaitThread(thread, NULL);
-    SDL_CloseAudio();
-    SDL_Quit();
+    deinit_SDL();
 
     return 0;
 }

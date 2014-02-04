@@ -1,6 +1,6 @@
 /*
   Alis, A SEGA Master System emulator
-  Copyright (C) 2002-2013 Cidorvan Leite
+  Copyright (C) 2002-2014 Cidorvan Leite
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -36,7 +36,8 @@ extern unsigned char rVol1;
 
 // VDP
 void reset_VDP();
-void scan_frame();
+void scan_frame(void *buffer);
+extern unsigned char VDPR;
 extern unsigned char VDPStatus;
 
 // Surface
