@@ -1,3 +1,7 @@
+2014-02-10  Cidorvan Leite  <cidorvan@gmail.com>
+
+    * UI: Display rom file name on window title.
+
 2014-02-04  Cidorvan Leite  <cidorvan@gmail.com>
 
     * UI: Removed thread for CPU.

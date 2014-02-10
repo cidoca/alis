@@ -68,7 +68,7 @@ void save_game(int slot)
     int fd, pos;
     char filename[FILENAME_MAX];
 
-    sprintf(filename, "%s.sa%d", rom_filename, slot);
+    snprintf(filename, FILENAME_MAX, "%s.sa%d", rom_filename, slot);
     fd = open(filename, O_CREAT | O_WRONLY, 0664);
     if (fd > 0) {
         write(fd, &Flag, 18 + 16 + 6);          // CPU
@@ -97,7 +97,7 @@ int load_game(int slot)
     int fd;
     char filename[FILENAME_MAX];
 
-    sprintf(filename, "%s.sa%d", rom_filename, slot);
+    snprintf(filename, FILENAME_MAX, "%s.sa%d", rom_filename, slot);
     fd = open(filename, O_RDONLY);
     if (fd > 0) {
         read(fd, &Flag, 18 + 16 + 6);           // CPU
@@ -218,15 +218,18 @@ void main_loop()
     save_battery();
 }
 
-void init_SDL()
+void init_SDL(char *filename)
 {
+    char title[FILENAME_MAX];
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0) {
         printf("Error initializing SDL: %s\n", SDL_GetError());
         exit(-1);
     }
 
     // Create window and texture
-    win = SDL_CreateWindow("Alis", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    snprintf(title, FILENAME_MAX, "Alis - %s", filename);
+    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 192);
@@ -279,7 +282,7 @@ int main(int argc, char **argv)
 
     open_ROM(argv[1]);
 
-    init_SDL();
+    init_SDL(argv[1]);
 
     main_loop();
 
