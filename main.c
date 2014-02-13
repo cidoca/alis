@@ -31,6 +31,8 @@ SDL_Renderer *renderer;
 SDL_Texture *texture;
 char rom_filename[FILENAME_MAX];
 int audio_present = 1;
+int cpu_delay_index = 3;
+int cpu_delay[] = {2, 4, 8, 16, 32, 64, 128};
 
 void init_battery()
 {
@@ -143,9 +145,17 @@ void open_ROM(char *filename)
     reset_PSG();
 }
 
+void change_cpu_speed(int delta)
+{
+    if (delta < 0 && cpu_delay_index > 0 || delta > 0 && cpu_delay_index < sizeof(cpu_delay) / sizeof(cpu_delay[0]) - 1) {
+        cpu_delay_index += delta;
+        printf("CPU speed %d%%\n", 1600 / cpu_delay[cpu_delay_index]);
+    }
+}
+
 void get_controls()
 {
-    static int pause = 0;
+    static int pause = 0, slow = 0, fast = 0;
     static int save_slot1 = 0, save_slot2 = 0, save_slot3 = 0, save_slot4 = 0, save_slot5 = 0;
     static int load_slot1 = 0, load_slot2 = 0, load_slot3 = 0, load_slot4 = 0, load_slot5 = 0;
 
@@ -170,6 +180,10 @@ void get_controls()
     // Reset and pause button
     CHECK_KEY(SDL_SCANCODE_ESCAPE, Joy2, 0x10)
     CHECK_STATE_KEY(SDL_SCANCODE_SPACE, pause, int_NMI())
+
+    // Change speed
+    CHECK_STATE_KEY(SDL_SCANCODE_F3, slow, change_cpu_speed(1))
+    CHECK_STATE_KEY(SDL_SCANCODE_F4, fast, change_cpu_speed(-1))
 
     // Save game
     CHECK_STATE_KEY(SDL_SCANCODE_F5, save_slot1, save_game(1))
@@ -196,11 +210,12 @@ void main_loop()
         SDL_PauseAudio(0);
 
     while (!done) {
+        t = SDL_GetTicks();
+
         while (SDL_PollEvent(&event))
             if (event.type == SDL_QUIT)
                 done = 1;
 
-        t = SDL_GetTicks();
         get_controls();
         SDL_LockTexture(texture, NULL, &buffer, &p);
         scan_frame(buffer);
@@ -208,8 +223,8 @@ void main_loop()
         SDL_RenderCopy(renderer, texture, VDPR & 0x20 ? &rect : NULL,  NULL);
         SDL_RenderPresent(renderer);
         t2 = SDL_GetTicks();
-        if (t2 - t < 16)
-            SDL_Delay(16 - t2 + t);
+        if (t2 - t < cpu_delay[cpu_delay_index])
+            SDL_Delay(cpu_delay[cpu_delay_index] - t2 + t);
     }
 
     if (audio_present)

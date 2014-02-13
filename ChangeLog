@@ -1,3 +1,7 @@
+2014-02-13  Cidorvan Leite  <cidorvan@gmail.com>
+
+    * UI: Added support to change CPU speed.
+
 2014-02-10  Cidorvan Leite  <cidorvan@gmail.com>
 
     * UI: Display rom file name on window title.
