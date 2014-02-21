@@ -1,3 +1,7 @@
+2014-02-21  Cidorvan Leite  <cidorvan@gmail.com>
+
+    * UI: Moved messages from stdout to game screen.
+
 2014-02-13  Cidorvan Leite  <cidorvan@gmail.com>
 
     * UI: Added support to change CPU speed.

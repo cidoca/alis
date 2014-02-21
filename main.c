@@ -22,6 +22,7 @@
 #include "core.h"
 //#include "icon.h"
 
+#define MESSAGE_TIME (60 * 2)
 #define CHECK_KEY(key, port, value) if (keys[key]) port &= ~value;
 #define CHECK_STATE_KEY(key, state, action) if (keys[key] != state) { state = keys[key]; if (state) action; }
 
@@ -30,6 +31,8 @@ SDL_Window *win;
 SDL_Renderer *renderer;
 SDL_Texture *texture;
 char rom_filename[FILENAME_MAX];
+char message[32] = "";
+int message_time = 0;
 int audio_present = 1;
 int cpu_delay_index = 3;
 int cpu_delay[] = {2, 4, 8, 16, 32, 64, 128};
@@ -90,7 +93,8 @@ void save_game(int slot)
         write(fd, &rVol1, 24 + 9);              // PSG
         write(fd, &VDPStatus, 1 + 2 + 16433);   // VDP
         close(fd);
-        printf("game saved to slot %d\n", slot);
+        message_time = MESSAGE_TIME;
+        snprintf(message, sizeof(message), "GAME SAVED TO SLOT %d", slot);
     }
 }
 
@@ -115,7 +119,8 @@ int load_game(int slot)
         read(fd, &rVol1, 24 + 9);               // PSG
         read(fd, &VDPStatus, 1 + 2 + 16433);    // VDP
         close(fd);
-        printf("game load from slot %d\n", slot);
+        message_time = MESSAGE_TIME;
+        snprintf(message, sizeof(message), "GAME LOADED FROM SLOT %d", slot);
     }
 }
 
@@ -149,7 +154,8 @@ void change_cpu_speed(int delta)
 {
     if (delta < 0 && cpu_delay_index > 0 || delta > 0 && cpu_delay_index < sizeof(cpu_delay) / sizeof(cpu_delay[0]) - 1) {
         cpu_delay_index += delta;
-        printf("CPU speed %d%%\n", 1600 / cpu_delay[cpu_delay_index]);
+        message_time = MESSAGE_TIME;
+        snprintf(message, sizeof(message), "CPU SPEED %d%%", 1600 / cpu_delay[cpu_delay_index]);
     }
 }
 
@@ -198,6 +204,16 @@ void get_controls()
     CHECK_STATE_KEY(SDL_SCANCODE_F12, load_slot4, load_game(4))
 }
 
+void draw_message(void *buffer)
+{
+    if (message_time > 0) {
+        int x = VDPR & 0x20 ? 16 : 8;
+        message_time--;
+        draw_text(buffer, x + 1, 9, message, 0x202020);
+        draw_text(buffer, x, 8, message, 0xE0E0E0);
+    }
+}
+
 void main_loop()
 {
     int done = 0;
@@ -219,6 +235,7 @@ void main_loop()
         get_controls();
         SDL_LockTexture(texture, NULL, &buffer, &p);
         scan_frame(buffer);
+        draw_message(buffer);
         SDL_UnlockTexture(texture);
         SDL_RenderCopy(renderer, texture, VDPR & 0x20 ? &rect : NULL,  NULL);
         SDL_RenderPresent(renderer);

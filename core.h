@@ -42,3 +42,6 @@ extern unsigned char VDPStatus;
 
 // Surface
 void write_frame(void *surface, int bpp);
+
+// Text
+void draw_text(void *surface, int x, int y, char *text, unsigned int color);
