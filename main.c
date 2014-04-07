@@ -61,7 +61,7 @@ void save_battery()
 
     strcpy(filename, rom_filename);
     strcat(filename, ".srm");
-    fd = open(filename, O_CREAT | O_WRONLY, 0664);
+    fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0664);
     if (fd > 0) {
         write(fd, RAM_EX, 32768);
         close(fd);
@@ -74,7 +74,7 @@ void save_game(int slot)
     char filename[FILENAME_MAX];
 
     snprintf(filename, FILENAME_MAX, "%s.sa%d", rom_filename, slot);
-    fd = open(filename, O_CREAT | O_WRONLY, 0664);
+    fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0664);
     if (fd > 0) {
         write(fd, &Flag, 18 + 16 + 6);          // CPU
         write(fd, &battery, 1 + 1);
