@@ -22,20 +22,29 @@
 #include "core.h"
 //#include "icon.h"
 
-#define MESSAGE_TIME (60 * 2)
+#define JOY_THRESHOLD   5000
+#define MESSAGE_TIME    (60 * 2)
 #define CHECK_KEY(key, port, value) if (keys[key]) port &= ~value;
-#define CHECK_STATE_KEY(key, state, action) if (keys[key] != state) { state = keys[key]; if (state) action; }
+#define CHECK_AXIS(joy, jn, axis, value1, value2) \
+    if (joy_axis[jn][axis] <= -JOY_THRESHOLD) joy &= ~value1; \
+    else if (joy_axis[jn][axis] >= JOY_THRESHOLD) joy &= ~value2;
+#define CHECK_BUTTON(joy, jn, flag, value) if (joy_button[jn] & flag) joy &= ~value;
+#define CHECK_STATE_KEY(key, state, action) if (keys[key] != state) { \
+    state = keys[key]; if (state) action; }
 
 Uint8 *keys;
 SDL_Window *win;
 SDL_Renderer *renderer;
 SDL_Texture *texture;
+SDL_Joystick *joy1 = NULL, *joy2 = NULL;
 char rom_filename[FILENAME_MAX];
 char message[32] = "";
 int message_time = 0;
 int audio_present = 1;
 int cpu_delay_index = 3;
 int cpu_delay[] = {2, 4, 8, 16, 32, 64, 128};
+int joy_axis[2][2] = {{0, 0}, {0, 0}};
+int joy_button[2] = {0, 0};
 
 void init_battery()
 {
@@ -167,7 +176,7 @@ void get_controls()
 
     Joy1 = Joy2 = 0xFF;
 
-    // Joystick 1
+    // Joystick 1 (Keyboard)
     CHECK_KEY(SDL_SCANCODE_UP, Joy1, 0x01)
     CHECK_KEY(SDL_SCANCODE_DOWN, Joy1, 0x02)
     CHECK_KEY(SDL_SCANCODE_LEFT, Joy1, 0x04)
@@ -175,13 +184,29 @@ void get_controls()
     CHECK_KEY(SDL_SCANCODE_Z, Joy1, 0x10)
     CHECK_KEY(SDL_SCANCODE_X, Joy1, 0x20)
 
-    // Joystick 2
+    // Joystick 1
+    if (joy1) {
+        CHECK_AXIS(Joy1, 0, 0, 0x04, 0x08);
+        CHECK_AXIS(Joy1, 0, 1, 0x01, 0x02);
+        CHECK_BUTTON(Joy1, 0, 0x55555555, 0x10);
+        CHECK_BUTTON(Joy1, 0, 0xAAAAAAAA, 0x20);
+    }
+
+    // Joystick 2 (Keyboard)
     CHECK_KEY(SDL_SCANCODE_KP_5, Joy1, 0x40)
     CHECK_KEY(SDL_SCANCODE_KP_2, Joy1, 0x80)
     CHECK_KEY(SDL_SCANCODE_KP_1, Joy2, 0x01)
     CHECK_KEY(SDL_SCANCODE_KP_3, Joy2, 0x02)
     CHECK_KEY(SDL_SCANCODE_N, Joy2, 0x04)
     CHECK_KEY(SDL_SCANCODE_M, Joy2, 0x08)
+
+    // Joystick 2
+    if (joy2) {
+        CHECK_AXIS(Joy1, 1, 1, 0x40, 0x80);
+        CHECK_AXIS(Joy2, 1, 0, 0x01, 0x02);
+        CHECK_BUTTON(Joy2, 1, 0x55555555, 0x04);
+        CHECK_BUTTON(Joy2, 1, 0xAAAAAAAA, 0x08);
+    }
 
     // Reset and pause button
     CHECK_KEY(SDL_SCANCODE_ESCAPE, Joy2, 0x10)
@@ -228,9 +253,21 @@ void main_loop()
     while (!done) {
         t = SDL_GetTicks();
 
-        while (SDL_PollEvent(&event))
+        while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT)
                 done = 1;
+            else if (event.type == SDL_JOYAXISMOTION) {
+                if (event.jaxis.which < 2 && event.jaxis.axis < 2)
+                    joy_axis[event.jaxis.which][event.jaxis.axis] = event.jaxis.value;
+            }
+            else if ((event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYBUTTONUP) &&
+                                                         event.jbutton.which < 2) {
+                if (event.jbutton.state)
+                    joy_button[event.jbutton.which] |= 1 << event.jbutton.button;
+                else
+                    joy_button[event.jbutton.which] &= ~(1 << event.jbutton.button);
+            }
+        }
 
         get_controls();
         SDL_LockTexture(texture, NULL, &buffer, &p);
@@ -254,7 +291,7 @@ void init_SDL(char *filename)
 {
     char title[FILENAME_MAX];
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_TIMER) < 0) {
         printf("Error initializing SDL: %s\n", SDL_GetError());
         exit(-1);
     }
@@ -266,6 +303,8 @@ void init_SDL(char *filename)
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 192);
     keys = (Uint8*)SDL_GetKeyboardState(NULL);
+    joy1 = SDL_JoystickOpen(0);
+    joy2 = SDL_JoystickOpen(1);
 
     // Define window icon
 //    SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(icon_pixels, 64, 64, 16, 64 * 2, 0xF800, 0x7E0, 0x1F, 0x0);
@@ -298,6 +337,10 @@ void init_SDL(char *filename)
 void deinit_SDL()
 {
     SDL_CloseAudio();
+    if (joy2)
+        SDL_JoystickClose(joy2);
+    if (joy1)
+        SDL_JoystickClose(joy1);
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(win);

@@ -1,3 +1,7 @@
+2014-04-08  Cidorvan Leite  <cidorvan@gmail.com>
+
+    * UI: Added support to joysticks.
+
 2014-02-21  Cidorvan Leite  <cidorvan@gmail.com>
 
     * UI: Moved messages from stdout to game screen.
