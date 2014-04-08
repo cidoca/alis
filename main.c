@@ -23,7 +23,7 @@
 //#include "icon.h"
 
 #define JOY_THRESHOLD   5000
-#define MESSAGE_TIME    (60 * 2)
+#define MESSAGE_TIME    2000
 #define CHECK_KEY(key, port, value) if (keys[key]) port &= ~value;
 #define CHECK_AXIS(joy, jn, axis, value1, value2) \
     if (joy_axis[jn][axis] <= -JOY_THRESHOLD) joy &= ~value1; \
@@ -39,7 +39,7 @@ SDL_Texture *texture;
 SDL_Joystick *joy1 = NULL, *joy2 = NULL;
 char rom_filename[FILENAME_MAX];
 char message[32] = "";
-int message_time = 0;
+Uint32 message_timeout = 0;
 int audio_present = 1;
 int cpu_delay_index = 3;
 int cpu_delay[] = {2, 4, 8, 16, 32, 64, 128};
@@ -102,7 +102,7 @@ void save_game(int slot)
         write(fd, &rVol1, 24 + 9);              // PSG
         write(fd, &VDPStatus, 1 + 2 + 16433);   // VDP
         close(fd);
-        message_time = MESSAGE_TIME;
+        message_timeout = SDL_GetTicks() + MESSAGE_TIME;
         snprintf(message, sizeof(message), "GAME SAVED TO SLOT %d", slot);
     }
 }
@@ -128,7 +128,7 @@ int load_game(int slot)
         read(fd, &rVol1, 24 + 9);               // PSG
         read(fd, &VDPStatus, 1 + 2 + 16433);    // VDP
         close(fd);
-        message_time = MESSAGE_TIME;
+        message_timeout = SDL_GetTicks() + MESSAGE_TIME;
         snprintf(message, sizeof(message), "GAME LOADED FROM SLOT %d", slot);
     }
 }
@@ -163,7 +163,7 @@ void change_cpu_speed(int delta)
 {
     if (delta < 0 && cpu_delay_index > 0 || delta > 0 && cpu_delay_index < sizeof(cpu_delay) / sizeof(cpu_delay[0]) - 1) {
         cpu_delay_index += delta;
-        message_time = MESSAGE_TIME;
+        message_timeout = SDL_GetTicks() + MESSAGE_TIME;
         snprintf(message, sizeof(message), "CPU SPEED %d%%", 1600 / cpu_delay[cpu_delay_index]);
     }
 }
@@ -213,8 +213,8 @@ void get_controls()
     CHECK_STATE_KEY(SDL_SCANCODE_SPACE, pause, int_NMI())
 
     // Change speed
-    CHECK_STATE_KEY(SDL_SCANCODE_F3, slow, change_cpu_speed(1))
-    CHECK_STATE_KEY(SDL_SCANCODE_F4, fast, change_cpu_speed(-1))
+    CHECK_STATE_KEY(SDL_SCANCODE_MINUS, slow, change_cpu_speed(1))
+    CHECK_STATE_KEY(SDL_SCANCODE_EQUALS, fast, change_cpu_speed(-1))
 
     // Save game
     CHECK_STATE_KEY(SDL_SCANCODE_F5, save_slot1, save_game(1))
@@ -229,11 +229,10 @@ void get_controls()
     CHECK_STATE_KEY(SDL_SCANCODE_F12, load_slot4, load_game(4))
 }
 
-void draw_message(void *buffer)
+void draw_message(void *buffer, Uint32 tick)
 {
-    if (message_time > 0) {
+    if (message_timeout > tick) {
         int x = VDPR & 0x20 ? 16 : 8;
-        message_time--;
         draw_text(buffer, x + 1, 9, message, 0x202020);
         draw_text(buffer, x, 8, message, 0xE0E0E0);
     }
@@ -272,10 +271,11 @@ void main_loop()
         get_controls();
         SDL_LockTexture(texture, NULL, &buffer, &p);
         scan_frame(buffer);
-        draw_message(buffer);
+        draw_message(buffer, t);
         SDL_UnlockTexture(texture);
         SDL_RenderCopy(renderer, texture, VDPR & 0x20 ? &rect : NULL,  NULL);
         SDL_RenderPresent(renderer);
+
         t2 = SDL_GetTicks();
         if (t2 - t < cpu_delay[cpu_delay_index])
             SDL_Delay(cpu_delay[cpu_delay_index] - t2 + t);
