@@ -4,7 +4,7 @@ COREDIR=core
 LIBCORE=$(COREDIR)/libcore.a
 
 CC=gcc
-CFLAGS=-m32 -O2 `sdl2-config --cflags`
+CFLAGS=-m32 -O2 -Wall `sdl2-config --cflags`
 LDFLAGS=-m32
 LIBS=-lSDL2
 
