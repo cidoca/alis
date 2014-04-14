@@ -1,3 +1,8 @@
+2014-04-14  Cidorvan Leite  <cidorvan@gmail.com>
+
+    * UI: Added support to rewind the game.
+          Removed icon resource, not working with SDL2.
+
 2014-04-09  Cidorvan Leite  <cidorvan@gmail.com>
 
     * UI: Added support to record and play games.

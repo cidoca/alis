@@ -16,13 +16,19 @@
   along with this program.  If not, see [http://www.gnu.org/licenses/].
 */
 
+// Avoid overflow warnings
+#undef _FORTIFY_SOURCE
+
 #include <fcntl.h>
-#include <string.h>
+#include <unistd.h>
 #include <SDL2/SDL.h>
 #include "core.h"
 
-#define JOY_THRESHOLD   5000
-#define MESSAGE_TIME    2000
+#define JOY_THRESHOLD       5000
+#define MESSAGE_TIME        2000
+#define STATE_SIZE          24720
+#define TIME_MACHINE_FRAMES (60 * 30)
+#define TIME_MACHINE_SIZE   (STATE_SIZE * TIME_MACHINE_FRAMES)
 #define CHECK_KEY(key, port, value) if (keys[key]) port &= ~value;
 #define CHECK_AXIS(joy, jn, axis, value1, value2) \
     if (joy_axis[jn][axis] <= -JOY_THRESHOLD) joy &= ~value1; \
@@ -45,11 +51,8 @@ int cpu_delay[] = {2, 4, 8, 16, 32, 64, 128};
 int joy_axis[2][2] = {{0, 0}, {0, 0}};
 int joy_button[2] = {0, 0};
 int record_fd = 0, play_fd = 0;
-
-// Replace include unistd.h to avoid a lot of warnings
-ssize_t read(int fd, void *buf, size_t count);
-ssize_t write(int fd, const void *buf, size_t count);
-int close(int fd);
+int time_machine_count = 0;
+unsigned char *time_machine, *time_machine_position;
 
 void init_battery()
 {
@@ -97,11 +100,11 @@ void save_state(int fd)
     pos = pBank2ROM - ROM;
     write(fd, &pos, 4);
     write(fd, RAM, 8192);                   // RAM
-    if (battery)
-        write(fd, RAM_EX, 32768);           // SRAM
     write(fd, &Nationalization, 1);         // IO
     write(fd, &rVol1, 24 + 9);              // PSG
     write(fd, &VDPStatus, 1 + 2 + 16433);   // VDP
+    if (battery)
+        write(fd, RAM_EX, 32768);           // SRAM
 }
 
 void load_state(int fd)
@@ -113,11 +116,11 @@ void load_state(int fd)
     pBank2 += (unsigned)ROM;
     pBank2ROM += (unsigned)ROM;
     read(fd, RAM, 8192);                    // RAM
-    if (battery)
-        read(fd, RAM_EX, 32768);            // SRAM
     read(fd, &Nationalization, 1);          // IO
     read(fd, &rVol1, 24 + 9);               // PSG
     read(fd, &VDPStatus, 1 + 2 + 16433);    // VDP
+    if (battery)
+        read(fd, RAM_EX, 32768);            // SRAM
 }
 
 int stop_record_play()
@@ -217,11 +220,13 @@ void open_ROM(char *filename)
         exit(-1);
     }
 
+    // Remove extension from file name
     strcpy(rom_filename, filename);
     char *ext = strrchr(rom_filename, '.');
     if (ext)
         *ext = 0;
 
+    // Read ROM
     ROM = (unsigned char *)malloc(512 * 2048);
     int size = read(fd, ROM, 512 * 2048) / 512;
     close(fd);
@@ -233,6 +238,9 @@ void open_ROM(char *filename)
     reset_CPU();
     reset_VDP();
     reset_PSG();
+
+    // Alloc memory to time machine
+    time_machine_position = time_machine = (unsigned char *)malloc(TIME_MACHINE_SIZE);
 }
 
 void change_cpu_speed(int delta)
@@ -244,8 +252,9 @@ void change_cpu_speed(int delta)
     }
 }
 
-void get_controls()
+void get_controls(Uint32 tick)
 {
+    int playing = 0, rewinding = 0;
     static int pause = 0, slow = 0, fast = 0;
     static int record_slot1 = 0, record_slot2 = 0, record_slot3 = 0, record_slot4 = 0;
     static int play_slot1 = 0, play_slot2 = 0, play_slot3 = 0, play_slot4 = 0;
@@ -256,95 +265,145 @@ void get_controls()
     CHECK_STATE_KEY(SDL_SCANCODE_MINUS, slow, change_cpu_speed(1))
     CHECK_STATE_KEY(SDL_SCANCODE_EQUALS, fast, change_cpu_speed(-1))
 
-    if (keys[SDL_SCANCODE_LSHIFT]) {
-        // Record game
-        CHECK_STATE_KEY(SDL_SCANCODE_F5, record_slot1, record_game(1))
-        CHECK_STATE_KEY(SDL_SCANCODE_F6, record_slot2, record_game(2))
-        CHECK_STATE_KEY(SDL_SCANCODE_F7, record_slot3, record_game(3))
-        CHECK_STATE_KEY(SDL_SCANCODE_F8, record_slot4, record_game(4))
+    if (!keys[SDL_SCANCODE_BACKSPACE]) {
+        if (keys[SDL_SCANCODE_LSHIFT]) {
+            // Record game
+            CHECK_STATE_KEY(SDL_SCANCODE_F5, record_slot1, record_game(1))
+            CHECK_STATE_KEY(SDL_SCANCODE_F6, record_slot2, record_game(2))
+            CHECK_STATE_KEY(SDL_SCANCODE_F7, record_slot3, record_game(3))
+            CHECK_STATE_KEY(SDL_SCANCODE_F8, record_slot4, record_game(4))
 
-        // Play game
-        CHECK_STATE_KEY(SDL_SCANCODE_F9, play_slot1, play_game(1))
-        CHECK_STATE_KEY(SDL_SCANCODE_F10, play_slot2, play_game(2))
-        CHECK_STATE_KEY(SDL_SCANCODE_F11, play_slot3, play_game(3))
-        CHECK_STATE_KEY(SDL_SCANCODE_F12, play_slot4, play_game(4))
-    } else {
-        // Save game
-        CHECK_STATE_KEY(SDL_SCANCODE_F5, save_slot1, save_game(1))
-        CHECK_STATE_KEY(SDL_SCANCODE_F6, save_slot2, save_game(2))
-        CHECK_STATE_KEY(SDL_SCANCODE_F7, save_slot3, save_game(3))
-        CHECK_STATE_KEY(SDL_SCANCODE_F8, save_slot4, save_game(4))
+            // Play game
+            CHECK_STATE_KEY(SDL_SCANCODE_F9, play_slot1, play_game(1))
+            CHECK_STATE_KEY(SDL_SCANCODE_F10, play_slot2, play_game(2))
+            CHECK_STATE_KEY(SDL_SCANCODE_F11, play_slot3, play_game(3))
+            CHECK_STATE_KEY(SDL_SCANCODE_F12, play_slot4, play_game(4))
+        } else {
+            // Save game
+            CHECK_STATE_KEY(SDL_SCANCODE_F5, save_slot1, save_game(1))
+            CHECK_STATE_KEY(SDL_SCANCODE_F6, save_slot2, save_game(2))
+            CHECK_STATE_KEY(SDL_SCANCODE_F7, save_slot3, save_game(3))
+            CHECK_STATE_KEY(SDL_SCANCODE_F8, save_slot4, save_game(4))
 
-        // Load game
-        CHECK_STATE_KEY(SDL_SCANCODE_F9, load_slot1, load_game(1))
-        CHECK_STATE_KEY(SDL_SCANCODE_F10, load_slot2, load_game(2))
-        CHECK_STATE_KEY(SDL_SCANCODE_F11, load_slot3, load_game(3))
-        CHECK_STATE_KEY(SDL_SCANCODE_F12, load_slot4, load_game(4))
+            // Load game
+            CHECK_STATE_KEY(SDL_SCANCODE_F9, load_slot1, load_game(1))
+            CHECK_STATE_KEY(SDL_SCANCODE_F10, load_slot2, load_game(2))
+            CHECK_STATE_KEY(SDL_SCANCODE_F11, load_slot3, load_game(3))
+            CHECK_STATE_KEY(SDL_SCANCODE_F12, load_slot4, load_game(4))
+        }
     }
 
     // Play a record game
     if (play_fd > 0) {
         if (read(play_fd, &Joy1, 2) == 2) {
+            playing = 1;
+            if (!(Joy2 & 0x40)) {
+                Joy2 |= 0x40;
+                rewinding = 1;
+            }
             if (!(Joy2 & 0x20)) {
                 Joy2 |= 0x20;
                 int_NMI();
             }
-            return;
+        } else {
+            close(play_fd);
+            play_fd = 0;
+            message_timeout = tick + MESSAGE_TIME;
+            snprintf(message, sizeof(message), "FINISHED PLAYING");
+        }
+    }
+
+    if (!playing) {
+        Joy1 = Joy2 = 0xFF;
+
+        // Joystick 1 (Keyboard)
+        CHECK_KEY(SDL_SCANCODE_UP, Joy1, 0x01)
+        CHECK_KEY(SDL_SCANCODE_DOWN, Joy1, 0x02)
+        CHECK_KEY(SDL_SCANCODE_LEFT, Joy1, 0x04)
+        CHECK_KEY(SDL_SCANCODE_RIGHT, Joy1, 0x08)
+        CHECK_KEY(SDL_SCANCODE_Z, Joy1, 0x10)
+        CHECK_KEY(SDL_SCANCODE_X, Joy1, 0x20)
+
+        // Joystick 1
+        if (joy1) {
+            CHECK_AXIS(Joy1, 0, 0, 0x04, 0x08);
+            CHECK_AXIS(Joy1, 0, 1, 0x01, 0x02);
+            CHECK_BUTTON(Joy1, 0, 0x55555555, 0x10);
+            CHECK_BUTTON(Joy1, 0, 0xAAAAAAAA, 0x20);
         }
 
-        close(play_fd);
-        play_fd = 0;
-        message_timeout = SDL_GetTicks() + MESSAGE_TIME;
-        snprintf(message, sizeof(message), "FINISHED PLAYING");
+        // Joystick 2 (Keyboard)
+        CHECK_KEY(SDL_SCANCODE_KP_5, Joy1, 0x40)
+        CHECK_KEY(SDL_SCANCODE_KP_2, Joy1, 0x80)
+        CHECK_KEY(SDL_SCANCODE_KP_1, Joy2, 0x01)
+        CHECK_KEY(SDL_SCANCODE_KP_3, Joy2, 0x02)
+        CHECK_KEY(SDL_SCANCODE_N, Joy2, 0x04)
+        CHECK_KEY(SDL_SCANCODE_M, Joy2, 0x08)
+
+        // Joystick 2
+        if (joy2) {
+            CHECK_AXIS(Joy1, 1, 1, 0x40, 0x80);
+            CHECK_AXIS(Joy2, 1, 0, 0x01, 0x02);
+            CHECK_BUTTON(Joy2, 1, 0x55555555, 0x04);
+            CHECK_BUTTON(Joy2, 1, 0xAAAAAAAA, 0x08);
+        }
+
+        // Reset button
+        CHECK_KEY(SDL_SCANCODE_ESCAPE, Joy2, 0x10)
     }
-
-    Joy1 = Joy2 = 0xFF;
-
-    // Joystick 1 (Keyboard)
-    CHECK_KEY(SDL_SCANCODE_UP, Joy1, 0x01)
-    CHECK_KEY(SDL_SCANCODE_DOWN, Joy1, 0x02)
-    CHECK_KEY(SDL_SCANCODE_LEFT, Joy1, 0x04)
-    CHECK_KEY(SDL_SCANCODE_RIGHT, Joy1, 0x08)
-    CHECK_KEY(SDL_SCANCODE_Z, Joy1, 0x10)
-    CHECK_KEY(SDL_SCANCODE_X, Joy1, 0x20)
-
-    // Joystick 1
-    if (joy1) {
-        CHECK_AXIS(Joy1, 0, 0, 0x04, 0x08);
-        CHECK_AXIS(Joy1, 0, 1, 0x01, 0x02);
-        CHECK_BUTTON(Joy1, 0, 0x55555555, 0x10);
-        CHECK_BUTTON(Joy1, 0, 0xAAAAAAAA, 0x20);
-    }
-
-    // Joystick 2 (Keyboard)
-    CHECK_KEY(SDL_SCANCODE_KP_5, Joy1, 0x40)
-    CHECK_KEY(SDL_SCANCODE_KP_2, Joy1, 0x80)
-    CHECK_KEY(SDL_SCANCODE_KP_1, Joy2, 0x01)
-    CHECK_KEY(SDL_SCANCODE_KP_3, Joy2, 0x02)
-    CHECK_KEY(SDL_SCANCODE_N, Joy2, 0x04)
-    CHECK_KEY(SDL_SCANCODE_M, Joy2, 0x08)
-
-    // Joystick 2
-    if (joy2) {
-        CHECK_AXIS(Joy1, 1, 1, 0x40, 0x80);
-        CHECK_AXIS(Joy2, 1, 0, 0x01, 0x02);
-        CHECK_BUTTON(Joy2, 1, 0x55555555, 0x04);
-        CHECK_BUTTON(Joy2, 1, 0xAAAAAAAA, 0x08);
-    }
-
-    // Reset button
-    CHECK_KEY(SDL_SCANCODE_ESCAPE, Joy2, 0x10)
 
     // Record a game
     if (record_fd > 0) {
-        if (!pause && keys[SDL_SCANCODE_SPACE] != pause)
+        if (keys[SDL_SCANCODE_BACKSPACE])
+            Joy2 &= ~0x40;
+        else if (!pause && keys[SDL_SCANCODE_SPACE] != pause)
             Joy2 &= ~0x20;
         write(record_fd, &Joy1, 2);
-        Joy2 |= 0x20;
+        Joy2 |= 0x60;
     }
 
     // Pause button
-    CHECK_STATE_KEY(SDL_SCANCODE_SPACE, pause, int_NMI())
+    if (!playing)
+        CHECK_STATE_KEY(SDL_SCANCODE_SPACE, pause, int_NMI())
+
+    // Time machine
+    if (keys[SDL_SCANCODE_BACKSPACE] || rewinding) {
+        if (time_machine_count > 1) {
+            time_machine_count--;
+
+            if (!rewinding && play_fd > 0) {
+                close(play_fd);
+                play_fd = 0;
+            }
+
+            time_machine_position -= 2 * STATE_SIZE;
+            if (time_machine_position < time_machine)
+                time_machine_position += TIME_MACHINE_SIZE;
+
+            memcpy(&Flag, time_machine_position, 18 + 16 + 6); time_machine_position += 18 + 16 + 6;
+            memcpy(&battery, time_machine_position, 1 + 1 + 16); time_machine_position += 1 + 1 + 16;
+            memcpy(RAM, time_machine_position, 8192); time_machine_position += 8192;
+            Nationalization = *time_machine_position++;
+            memcpy(&rVol1, time_machine_position, 24 + 9); time_machine_position += 24 + 9;
+            memcpy(&VDPStatus, time_machine_position, 1 + 2 + 16433); time_machine_position += 1 + 2 + 16433;
+
+            message_timeout = tick + MESSAGE_TIME;
+            snprintf(message, sizeof(message), "REWINDING BUFFER LEFT %d%%", time_machine_count * 100 / TIME_MACHINE_FRAMES);
+        }
+    } else {
+        if (time_machine_count < TIME_MACHINE_FRAMES)
+            time_machine_count++;
+
+        memcpy(time_machine_position, &Flag, 18 + 16 + 6); time_machine_position += 18 + 16 + 6;
+        memcpy(time_machine_position, &battery, 1 + 1 + 16); time_machine_position += 1 + 1 + 16;
+        memcpy(time_machine_position, RAM, 8192); time_machine_position += 8192;
+        *time_machine_position++ = Nationalization;
+        memcpy(time_machine_position, &rVol1, 24 + 9); time_machine_position += 24 + 9;
+        memcpy(time_machine_position, &VDPStatus, 1 + 2 + 16433); time_machine_position += 1 + 2 + 16433;
+
+        if (time_machine_position >= time_machine + TIME_MACHINE_SIZE)
+            time_machine_position = time_machine;
+    }
 }
 
 void draw_message(void *buffer, Uint32 tick)
@@ -396,7 +455,7 @@ void main_loop()
             }
         }
 
-        get_controls();
+        get_controls(t);
         SDL_LockTexture(texture, NULL, &buffer, &p);
         scan_frame(buffer);
         draw_message(buffer, t);
@@ -430,6 +489,8 @@ void init_SDL(char *filename)
     renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 192);
+
+    // Setup keyboard and joysticks
     keys = (Uint8*)SDL_GetKeyboardState(NULL);
     joy1 = SDL_JoystickOpen(0);
     joy2 = SDL_JoystickOpen(1);
@@ -479,11 +540,8 @@ int main(int argc, char **argv)
     }
 
     open_ROM(argv[1]);
-
     init_SDL(argv[1]);
-
     main_loop();
-
     deinit_SDL();
 
     return 0;
