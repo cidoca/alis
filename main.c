@@ -20,7 +20,6 @@
 #include <string.h>
 #include <SDL2/SDL.h>
 #include "core.h"
-//#include "icon.h"
 
 #define JOY_THRESHOLD   5000
 #define MESSAGE_TIME    2000
@@ -434,11 +433,6 @@ void init_SDL(char *filename)
     keys = (Uint8*)SDL_GetKeyboardState(NULL);
     joy1 = SDL_JoystickOpen(0);
     joy2 = SDL_JoystickOpen(1);
-
-    // Define window icon
-//    SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(icon_pixels, 64, 64, 16, 64 * 2, 0xF800, 0x7E0, 0x1F, 0x0);
-//    SDL_SetWindowIcon(win, icon);
-//    SDL_FreeSurface(icon);
 
     // Setup audio
     SDL_AudioSpec wanted;
