@@ -1,5 +1,5 @@
 ; Alis, A SEGA Master System emulator
-; Copyright (C) 2002-2013 Cidorvan Leite
+; Copyright (C) 2002-2014 Cidorvan Leite
 
 ; This program is free software: you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ EXTERN ?OpCodeErr1@@YAXHH@Z
 EXTERN ?OpCodeErr2@@YAXHHH@Z
 EXTERN ?OpCodeErr3@@YAXHHHH@Z
 
+%INCLUDE "data.inc"
 %INCLUDE "banks.inc"
 %INCLUDE "io.inc"
 
@@ -3989,46 +3990,3 @@ OpcodeFDCB:
     DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET5_IYd,_NIMP3     ; E
     DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET6_IYd,_NIMP3
     DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET7_IYd,_NIMP3     ; F
-
-
-
-SECTION .bss
-
-; Registradores ativos e passivos
-GLOBAL Flag, rAcc, rC, rB, rE, rD, rL, rH
-GLOBAL Flag2, rAcc2, rC2, rB2, rE2, rD2, rL2, rH2
-GLOBAL rR, rI
-Flag    RESB 1
-rAcc    RESB 1
-Flag2   RESB 1
-rAcc2   RESB 1
-rC      RESB 1
-rB      RESB 1
-rC2     RESB 1
-rB2     RESB 1
-rE      RESB 1
-rD      RESB 1
-rE2     RESB 1
-rD2     RESB 1
-rL      RESB 1
-rH      RESB 1
-rL2     RESB 1
-rH2     RESB 1
-rR      RESB 1
-rI      RESB 1
-
-; Ponteiros
-GLOBAL rIX, rIY, rPCx, rSPx
-rIX     RESD 1
-rIY     RESD 1
-rPCx    RESD 1
-rSPx    RESD 1
-
-; Interrupções
-GLOBAL TClock, IM, IFF1, IFF2, NMI
-TClock  RESB 1
-IM      RESB 1
-IFF1    RESB 1
-IFF2    RESB 1
-Halt    RESB 1
-NMI     RESB 1

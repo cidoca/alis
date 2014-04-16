@@ -1,5 +1,5 @@
 ; Alis, A SEGA Master System emulator
-; Copyright (C) 2002-2013 Cidorvan Leite
+; Copyright (C) 2002-2014 Cidorvan Leite
 
 ; This program is free software: you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
 
 FREQUENCE   EQU 44160
 BUFFERSIZE  EQU FREQUENCE / 60
+
+%INCLUDE "data.inc"
 
 SECTION .text
 
@@ -375,25 +377,7 @@ Frequencia:
 
 SECTION .bss
 
-; Registradores de som
-GLOBAL rVol1, rVol2, rVol3, rVol4, rFreq1, rFreq2, rFreq3, rFreq4, rLast
-rVol1   RESB 1
-rVol2   RESB 1
-rVol3   RESB 1
-rVol4   RESB 1
-rFreq1  RESD 1
-rFreq2  RESD 1
-rFreq3  RESD 1
-rFreq4  RESD 1
-rLast   RESD 1
-
-; Ruído
-GLOBAL Noise, FeedBack, NoiseFreq2
-Noise       RESD 1
-FeedBack    RESD 1
-NoiseFreq2  RESB 1
-
-; Períodos dos canais
+; Channels period
 GLOBAL Sinal, Periodo1, Periodo2, Periodo3, Periodo4
 Sinal       RESB 1
 Periodo1    RESD 1

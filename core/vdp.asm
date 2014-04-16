@@ -15,6 +15,7 @@
 ; along with this program.  If not, see [http://www.gnu.org/licenses/].
 
 
+%INCLUDE "data.inc"
 %INCLUDE "cpu.inc"
 %INCLUDE "io.inc"
 
@@ -543,22 +544,9 @@ sl          RESB 1
 ;sl2            RESD 1
 sb          RESD 1
 s8x         RESB 1
-
-GLOBAL RenderBL2
 RenderBL2   RESB 1
 
-GLOBAL ScanLine, LineInt, VDPCounter, VDPStatus
+GLOBAL ScanLine, LineInt, VDPCounter
 ScanLine    RESD 1          ; Scanline atual
 LineInt     RESB 1          ; Line Interrupt pendente
 VDPCounter  RESB 1          ; Line Interrupt Counter
-VDPStatus   RESB 1          ; Status do VDP
-
-GLOBAL cVDP, VDPLow
-cVDP    RESB 1              ; Primeira ou segunda escrita na porta BFh
-VDPLow  RESB 1              ; Valor auxiliar de escrita na porta BFh
-
-GLOBAL pRAM, VDPR, CRAM, VRAM
-pRAM    RESD 1              ; Ponteiro para acessar palheta de cores ou memória de vídeo
-VDPR    RESB 16             ; Registros do VDP
-CRAM    RESB 32             ; palette de cores
-VRAM    RESB 4000h          ; Memória de vídeo

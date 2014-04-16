@@ -26,16 +26,20 @@
 
 #define JOY_THRESHOLD       5000
 #define MESSAGE_TIME        2000
-#define STATE_SIZE          24720
+#define STATE_SIZE          (pDataEnd - pData)
 #define TIME_MACHINE_FRAMES (60 * 30)
 #define TIME_MACHINE_SIZE   (STATE_SIZE * TIME_MACHINE_FRAMES)
-#define CHECK_KEY(key, port, value) if (keys[key]) port &= ~value;
+#define CHECK_KEY(key, port, value) \
+    if (keys[key]) port &= ~value;
 #define CHECK_AXIS(joy, jn, axis, value1, value2) \
     if (joy_axis[jn][axis] <= -JOY_THRESHOLD) joy &= ~value1; \
     else if (joy_axis[jn][axis] >= JOY_THRESHOLD) joy &= ~value2;
-#define CHECK_BUTTON(joy, jn, flag, value) if (joy_button[jn] & flag) joy &= ~value;
-#define CHECK_STATE_KEY(key, state, action) if (keys[key] != state) { \
-    state = keys[key]; if (state) action; }
+#define CHECK_BUTTON(joy, jn, flag, value) \
+    if (joy_button[jn] & flag) joy &= ~value;
+#define CHECK_STATE_KEY(key, state, action) \
+    if (keys[key] != state) { \
+    state = keys[key]; \
+    if (state) action; }
 
 Uint8 *keys;
 SDL_Window *win;
@@ -87,40 +91,27 @@ void save_battery()
 
 void save_state(int fd)
 {
-    int pos;
+    pBank0 -= (unsigned)ROM;
+    pBank1 -= (unsigned)ROM;
+    pBank2 -= (unsigned)ROM;
+    pBank2ROM -= (unsigned)ROM;
 
-    write(fd, &Flag, 18 + 16 + 6);          // CPU
-    write(fd, &battery, 1 + 1);
-    pos = pBank0 - ROM;                     // BANKS
-    write(fd, &pos, 4);
-    pos = pBank1 - ROM;
-    write(fd, &pos, 4);
-    pos = pBank2 - ROM;
-    write(fd, &pos, 4);
-    pos = pBank2ROM - ROM;
-    write(fd, &pos, 4);
-    write(fd, RAM, 8192);                   // RAM
-    write(fd, &Nationalization, 1);         // IO
-    write(fd, &rVol1, 24 + 9);              // PSG
-    write(fd, &VDPStatus, 1 + 2 + 16433);   // VDP
-    if (battery)
-        write(fd, RAM_EX, 32768);           // SRAM
+    write(fd, pData, (battery ? pDataXEnd : pDataEnd) - pData);
+
+    pBank0 += (unsigned)ROM;
+    pBank1 += (unsigned)ROM;
+    pBank2 += (unsigned)ROM;
+    pBank2ROM += (unsigned)ROM;
 }
 
 void load_state(int fd)
 {
-    read(fd, &Flag, 18 + 16 + 6);           // CPU
-    read(fd, &battery, 1 + 1 + 16);
-    pBank0 += (unsigned)ROM;                // BANKS
+    read(fd, pData, (battery ? pDataXEnd : pDataEnd) - pData);
+
+    pBank0 += (unsigned)ROM;
     pBank1 += (unsigned)ROM;
     pBank2 += (unsigned)ROM;
     pBank2ROM += (unsigned)ROM;
-    read(fd, RAM, 8192);                    // RAM
-    read(fd, &Nationalization, 1);          // IO
-    read(fd, &rVol1, 24 + 9);               // PSG
-    read(fd, &VDPStatus, 1 + 2 + 16433);    // VDP
-    if (battery)
-        read(fd, RAM_EX, 32768);            // SRAM
 }
 
 int stop_record_play()
@@ -380,12 +371,8 @@ void get_controls(Uint32 tick)
             if (time_machine_position < time_machine)
                 time_machine_position += TIME_MACHINE_SIZE;
 
-            memcpy(&Flag, time_machine_position, 18 + 16 + 6); time_machine_position += 18 + 16 + 6;
-            memcpy(&battery, time_machine_position, 1 + 1 + 16); time_machine_position += 1 + 1 + 16;
-            memcpy(RAM, time_machine_position, 8192); time_machine_position += 8192;
-            Nationalization = *time_machine_position++;
-            memcpy(&rVol1, time_machine_position, 24 + 9); time_machine_position += 24 + 9;
-            memcpy(&VDPStatus, time_machine_position, 1 + 2 + 16433); time_machine_position += 1 + 2 + 16433;
+            memcpy(pData, time_machine_position, STATE_SIZE);
+            time_machine_position += STATE_SIZE;
 
             message_timeout = tick + MESSAGE_TIME;
             snprintf(message, sizeof(message), "REWINDING BUFFER LEFT %d%%", time_machine_count * 100 / TIME_MACHINE_FRAMES);
@@ -394,12 +381,8 @@ void get_controls(Uint32 tick)
         if (time_machine_count < TIME_MACHINE_FRAMES)
             time_machine_count++;
 
-        memcpy(time_machine_position, &Flag, 18 + 16 + 6); time_machine_position += 18 + 16 + 6;
-        memcpy(time_machine_position, &battery, 1 + 1 + 16); time_machine_position += 1 + 1 + 16;
-        memcpy(time_machine_position, RAM, 8192); time_machine_position += 8192;
-        *time_machine_position++ = Nationalization;
-        memcpy(time_machine_position, &rVol1, 24 + 9); time_machine_position += 24 + 9;
-        memcpy(time_machine_position, &VDPStatus, 1 + 2 + 16433); time_machine_position += 1 + 2 + 16433;
+        memcpy(time_machine_position, pData, STATE_SIZE);
+        time_machine_position += STATE_SIZE;
 
         if (time_machine_position >= time_machine + TIME_MACHINE_SIZE)
             time_machine_position = time_machine;

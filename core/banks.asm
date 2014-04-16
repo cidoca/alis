@@ -1,5 +1,5 @@
 ; Alis, A SEGA Master System emulator
-; Copyright (C) 2002-2013 Cidorvan Leite
+; Copyright (C) 2002-2014 Cidorvan Leite
 
 ; This program is free software: you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 
 
 EXTERN init_battery
+%INCLUDE "data.inc"
 
 SECTION .text
 
@@ -165,25 +166,7 @@ WM8:    test BYTE [RAMSelect], 8
 
 SECTION .bss
 
-; Posição inválida para escrita
-GLOBAL garbage
+GLOBAL garbage, ROM_size, ROM
 garbage     RESW 1
-
-; BYTE [battery] em uso
-GLOBAL battery
-battery     RESB 1
-
-; Bancos de paginação
-GLOBAL RAMSelect, pBank0, pBank1, pBank2, pBank2ROM
-RAMSelect   RESB 1
-pBank0      RESD 1
-pBank1      RESD 1
-pBank2      RESD 1
-pBank2ROM   RESD 1
-
-; NEAR [RAM] e DWORD [ROM]
-GLOBAL ROM_size, ROM, RAM, RAM_EX
 ROM_size    RESB 1
 ROM         RESD 1
-RAM         RESB 8*1024
-RAM_EX      RESB 2*16*1024
