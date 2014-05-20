@@ -15,18 +15,18 @@
 ; along with this program.  If not, see [http://www.gnu.org/licenses/].
 
 
-FREQUENCE   EQU 44160
-BUFFERSIZE  EQU FREQUENCE / 60
+FREQUENCY   EQU 44160
+BUFFERSIZE  EQU FREQUENCY / 60
 
 %INCLUDE "data.inc"
 
 SECTION .text
 
-; * Reseta o som
-; ****************
+; * Reset sound system
+; **********************
 GLOBAL reset_PSG
 reset_PSG:
-        ; Limpa os registradores de som
+        ; Clear sound registers
         xor eax, eax
         mov DWORD [rVol1], eax
         mov DWORD [rFreq1], eax
@@ -35,22 +35,22 @@ reset_PSG:
         mov DWORD [rFreq4], eax
         mov DWORD [rLast], eax
 
-        ; Inicia ruído
+        ; Initialize noise
         mov DWORD [Noise], 1
         mov DWORD [FeedBack], 8000h
         mov BYTE [NoiseFreq2], al
 
-        ; Inicia Períodos
-        mov BYTE [Sinal], al
-        mov DWORD [Periodo1], FREQUENCE
-        mov DWORD [Periodo2], FREQUENCE
-        mov DWORD [Periodo3], FREQUENCE
-        mov DWORD [Periodo4], eax
+        ; Initialize periods
+        mov BYTE [Signal], al
+        mov DWORD [Period1], FREQUENCY
+        mov DWORD [Period2], FREQUENCY
+        mov DWORD [Period3], FREQUENCY
+        mov DWORD [Period4], eax
 
         ret
 
-; * Escreve dados nos registradores de som
-; ******************************************
+; * Write in sound registers
+; ****************************
 GLOBAL write_PSG
 write_PSG:
         test al, 80h
@@ -67,7 +67,7 @@ write_PSG:
         mov BYTE [rVol1+ebx], al
         ret
 
-        ; Frequência (1º escrita)
+        ; Frequency (first write)
 PSGW0:  cmp bl, 3
         je PSGW01
         and al, 0Fh
@@ -82,13 +82,13 @@ PSGW0:  cmp bl, 3
 PSGW00: mov DWORD [rLast], ebx
         ret
 
-        ; Ruído
+        ; Noise
 PSGW01: test al, 4
         jnz PSGW02
         mov DWORD [Noise], 1
-        mov DWORD [FeedBack], 08000h    ; Periodic DWORD [Noise]
+        mov DWORD [FeedBack], 08000h    ; Periodic noise
         jmp PSGW03
-PSGW02: mov DWORD [FeedBack], 0F037h    ; White DWORD [Noise]
+PSGW02: mov DWORD [FeedBack], 0F037h    ; White noise
 PSGW03: and al, 3
         cmp al, 3
         je PSGW04
@@ -103,7 +103,7 @@ PSGW04: mov BYTE [NoiseFreq2], 1
         mov DWORD [rFreq4], eax
         ret
 
-        ; Frequência (2º escrita)
+        ; Frequency (second write)
 PSGW1:  mov ebx, DWORD [rLast]
         shl eax, 4
         and eax, 3F0h
@@ -117,8 +117,8 @@ PSGW1:  mov ebx, DWORD [rLast]
         or DWORD [rFreq4], eax
 PSGW2:  ret
 
-; * Atualiza o buffer
-; *********************
+; * Updates buffer
+; ******************
 GLOBAL make_PSG
 make_PSG:
         push ebx
@@ -127,80 +127,67 @@ make_PSG:
         push ebp
         mov esi, [esp+24]   ; Second parameter (stream)
 
-        ; Limpa o Buffer
+        ; Clear buffer
         mov eax, 80808080h
         mov ecx, BUFFERSIZE / 4
         mov edi, esi
         rep stosd
 
-        ; Gera canal 1
+        ; Generates channel 1
         mov al, BYTE [rVol1]
-;       shl al, 1
         mov ah, 1
-        test BYTE [Sinal], ah
+        test BYTE [Signal], ah
         jz MPS01
         neg al
 MPS01:  mov ebx, DWORD [rFreq1]
         movzx ebx, WORD [Frequencia+ebx*2]
-        cmp ebx, FREQUENCE
+        cmp ebx, FREQUENCY
         ja MPS2
-        mov edx, DWORD [Periodo1]
+        mov edx, DWORD [Period1]
         call square_wave
-        mov DWORD [Periodo1], edx
-;       jmp MPS2
-;MPS1:  call LineWave
-;       mov DWORD [Periodo1], FREQUENCE
+        mov DWORD [Period1], edx
 
-        ; Gera canal 2
+        ; Generates channel 2
 MPS2:   mov al, BYTE [rVol2]
-;       shl al, 1
         mov ah, 2
-        test BYTE [Sinal], ah
+        test BYTE [Signal], ah
         jz MPS02
         neg al
 MPS02:  mov ebx, DWORD [rFreq2]
         movzx ebx, WORD [Frequencia+ebx*2]
-        cmp ebx, FREQUENCE
+        cmp ebx, FREQUENCY
         ja MPS4
-        mov edx, DWORD [Periodo2]
+        mov edx, DWORD [Period2]
         call square_wave
-        mov DWORD [Periodo2], edx
-;       jmp MPS4
-;MPS3:  call LineWave
-;MPS31: mov DWORD [Periodo2], FREQUENCE
+        mov DWORD [Period2], edx
 
-        ; Gera canal 3
+        ; Generates channel 3
 MPS4:   mov al, BYTE [rVol3]
-;       shl al, 1
         mov ah, 4
-        test BYTE [Sinal], ah
+        test BYTE [Signal], ah
         jz MPS04
         neg al
 MPS04:  mov ebx, DWORD [rFreq3]
         movzx ebx, WORD [Frequencia+ebx*2]
-        cmp ebx, FREQUENCE
+        cmp ebx, FREQUENCY
         ja MPS6
-        mov edx, DWORD [Periodo3]
+        mov edx, DWORD [Period3]
         call square_wave
-        mov DWORD [Periodo3], edx
-;       jmp MPS6
-;MPS5:  call LineWave
-;MPS51: mov DWORD [Periodo3], FREQUENCE
+        mov DWORD [Period3], edx
 
-        ; Gera canal 4
+        ; Generates channel 4
 MPS6:   mov ah, BYTE [rVol4]
         shl ah, 1
         mov ebx, DWORD [rFreq4]
-;       shr ebx, 1
         movzx ebx, WORD [Frequencia+ebx*2]
-        cmp ebx, FREQUENCE
+        cmp ebx, FREQUENCY
         ja MPS66
         mov ecx, BUFFERSIZE
-        mov edx, DWORD [Periodo4]
+        mov edx, DWORD [Period4]
         mov ebp, DWORD [FeedBack]
         mov edi, esi
         call WPNoise
-        mov DWORD [Periodo4], edx
+        mov DWORD [Period4], edx
 
 MPS66:  pop ebp
         pop edi
@@ -208,27 +195,8 @@ MPS66:  pop ebp
         pop ebx
         ret
 
-; * Gera uma linha na altura do volume
-; **************************************
-;GLOBAL LineWave
-;LineWave:
-;       mov ecx, BUFFERSIZE / 4
-;       mov edi, SoundBuffer ; ;        mov edi, offset SoundBuffer
-;       mov bl, al
-;       shl eax, 8
-;       mov al, bl
-;       shl eax, 8
-;       mov al, bl
-;       shl eax, 8
-;       mov al, bl
-;LW0:   add [edi], eax
-;       add edi, 4
-;       dec ecx
-;       jnz LW0
-;       ret
-
-; * Gera uma onda quadrada
-; **************************
+; * Generates a squera wave
+; ***************************
 GLOBAL square_wave
 square_wave:
         mov ecx, BUFFERSIZE
@@ -244,14 +212,14 @@ SW0:    jecxz SW1
         jg SW0
 
         neg al
-        xor BYTE [Sinal], ah
-        add edx, FREQUENCE
+        xor BYTE [Signal], ah
+        add edx, FREQUENCY
         jmp SW0
 
 SW1:    ret
 
-; * Gera ruído branco ou periódico
-; **********************************
+; * Generates a white or periodic noise
+; ***************************************
 GLOBAL WPNoise
 WPNoise:
         test DWORD [Noise], 1
@@ -262,7 +230,7 @@ WPN0:   mov al, ah
         xor DWORD [Noise], ebp
 WPN1:   shr DWORD [Noise], 1
 
-        add edx, FREQUENCE
+        add edx, FREQUENCY
 WPN2:   jecxz WPN3
         add [edi], al
         inc edi
@@ -276,7 +244,7 @@ WPN3:   ret
 
 SECTION .data
 
-; Tabela de frequências
+; Frequency table
 GLOBAL Frequencia
 Frequencia:
     DW 0FFFFh, 0FFFFh, 0FFFFh, 0FFFFh, 0F424h, 0C350h, 0A2C2h, 08B82h, 07A12h, 06C81h, 061A8h
@@ -378,9 +346,9 @@ Frequencia:
 SECTION .bss
 
 ; Channels period
-GLOBAL Sinal, Periodo1, Periodo2, Periodo3, Periodo4
-Sinal       RESB 1
-Periodo1    RESD 1
-Periodo2    RESD 1
-Periodo3    RESD 1
-Periodo4    RESD 1
+GLOBAL Signal, Period1, Period2, Period3, Period4
+Signal      RESB 1
+Period1     RESD 1
+Period2     RESD 1
+Period3     RESD 1
+Period4     RESD 1

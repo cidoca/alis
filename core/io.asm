@@ -22,39 +22,23 @@
 
 SECTION .text
 
-; * Porta para escrita não implementada
-; ***************************************
+; * Write port not implemented
+; ******************************
 GLOBAL _NWIMP
 _NWIMP:
-        ;movzx eax, al
-        ;push eax
-        ;push edx
-        ;push DWORD [rPC]
-        ;call ?WriteIOErr@@YAXHHH@Z
-        ;add esp, 12
         ret
 
-; * Porta para leitura não implementada
-; ***************************************
+; * Read port not implemented
+; *****************************
 GLOBAL _NRIMP
 _NRIMP:
-        ;push edx
-        ;push DWORD [rPC]
-        ;call ?ReadIOErr@@YAXHH@Z
-        ;add esp, 8
         ret
 
-; * Nada (R)
-; ************
-GLOBAL NadaR
-NadaR:
+; * Nothing to read
+; *******************
+GLOBAL Empty
+Empty:
         mov al, 0FFh
-        ret
-
-; * Nada (W)
-; ************
-GLOBAL NadaW
-NadaW:
         ret
 
 ; * 3E Memory Control (W)
@@ -113,7 +97,7 @@ WVDPD:
         cmp esi, 0
         je WVDPD1
         inc DWORD [pRAM]
-        cmp DWORD [pRAM], VRAM + 4000h ; cmp DWORD [pRAM], offset VRAM + 4000h
+        cmp DWORD [pRAM], VRAM + 4000h
         jb WVDPD0
         sub DWORD [pRAM], 4000h
 WVDPD0: mov [esi], al
@@ -134,38 +118,34 @@ _RVDPS:
 ; **********************
 GLOBAL WVDPA
 WVDPA:
-        ; Primeira ou segunda escrita?
+        ; First or second time?
         test BYTE [cVDP], 1
         jnz WVDPA0
         mov BYTE [VDPLow], al
         jmp WVDPAF
 
-        ; BYTE [VRAM] endereço
+        ; VRAM address
 WVDPA0: test al, 80h
         jnz WVDPA1
-;       mov bl, al
         and al, 3Fh
         mov ah, al
         mov al, BYTE [VDPLow]
         movzx eax, ax
-        add eax, VRAM ; add eax, offset VRAM
-;       test bl, 40h
-;       jnz WVDPA00
-;       inc eax
+        add eax, VRAM
 WVDPA00:mov DWORD [pRAM], eax
         jmp WVDPAF
 
-        ; PALRAM endereço
+        ; PAL RAM address
 WVDPA1: test al, 40h
         jz WVDPA2
         mov al, BYTE [VDPLow]
         and al, 1Fh
         movzx eax, al
-        add eax, CRAM ; add eax, offset CRAM
+        add eax, CRAM
         mov DWORD [pRAM], eax
         jmp WVDPAF
 
-        ; Registros do VDP
+        ; VDP registers
 WVDPA2: and al, 0Fh
         movzx edx, al
         mov al, BYTE [VDPLow]
@@ -232,9 +212,9 @@ SECTION .data
 GLOBAL read_io
 read_io:
 ;       0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DD NadaR,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD Empty,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
     DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 0
-    DD NadaR,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD Empty,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
     DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 1
     DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
     DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 2
@@ -292,19 +272,19 @@ write_io:
     DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; A
     DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
     DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   WVDPA,    WVDPD,    WVDPA      ; B
-    DD NadaW,    _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
     DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; C
     DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   NadaW,    NadaW      ; D
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; D
     DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
     DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; E
     DD YMAR,     YMDR,     YMCRW,    _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   NadaW,    NadaW      ; F
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; F
 
 
 SECTION .bss
 
-; Portas do joystick
+; Joystick ports
 GLOBAL Joy1, Joy2
 Joy1    RESB 1
 Joy2    RESB 1

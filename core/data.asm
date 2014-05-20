@@ -96,9 +96,9 @@ NoiseFreq2  RESB 1
 
 ; **** VDP ****
 GLOBAL VDPStatus, cVDP, VDPLow
-VDPStatus   RESB 1          ; Status do VDP
-cVDP        RESB 1          ; Primeira ou segunda escrita na porta BFh
-VDPLow      RESB 1          ; Valor auxiliar de escrita na porta BFh
+VDPStatus   RESB 1
+cVDP        RESB 1          ; First or second write in BFh port
+VDPLow      RESB 1          ; Temporary value for BFh port
 
 GLOBAL pRAM, VDPR, CRAM, VRAM
 pRAM    RESD 1              ; Pointer for palette or video memory

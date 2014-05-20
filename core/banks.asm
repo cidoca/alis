@@ -20,20 +20,20 @@ EXTERN init_battery
 
 SECTION .text
 
-; * Inicia ponteiros dos bancos
-; *******************************
+; * Initialize banks pointers
+; *****************************
 GLOBAL init_banks
 init_banks:
         push edi
 
-        ; Limpa a NEAR [RAM]
+        ; Clear RAM
         xor eax, eax
         mov BYTE [battery], al
         mov ecx, (40*1024)/4
-        mov edi, RAM ; mov edi, offset RAM
+        mov edi, RAM
         rep stosd
 
-        ; Inicia ponteiros dos bancos e registradores de paginação
+        ; Initialize banks pointers and page registers
         mov BYTE [RAMSelect], al
         mov eax, DWORD [ROM]
         mov DWORD [pBank0], eax
@@ -49,11 +49,11 @@ init_banks:
         pop edi
         ret
 
-; * Ler a memória
-; *****************
+; * Read memory
+; ***************
 GLOBAL read_mem
 read_mem:
-        ; Qual banco vai ler?
+        ; Which bank?
         cmp esi, 00400h
         jb RM0
         cmp esi, 04000h
@@ -63,12 +63,12 @@ read_mem:
         cmp esi, 0C000h
         jb RM3
 
-        ; Ler a NEAR [RAM] ou registradores de paginação
+        ; Read RAM or page register
         and esi, 0DFFFh
-        add esi, RAM - 0C000h ; add esi, offset RAM - 0C000h
+        add esi, RAM - 0C000h
         ret
 
-        ; Seleciona o banco para leitura
+        ; Select the right bank
 RM0:    add esi, DWORD [ROM]
         ret
 RM1:    add esi, DWORD [pBank0]
@@ -78,26 +78,26 @@ RM2:    add esi, DWORD [pBank1]
 RM3:    add esi, DWORD [pBank2]
         ret
 
-; * Escreve na memória
-; **********************
+; * Write memory
+; ****************
 GLOBAL write_mem
 write_mem:
-        ; Qual banco vai escrever?
+        ; Which bank?
         cmp esi, 08000h
         jb WM7
         cmp esi, 0C000h
         jb WM8
 
-        ; Escrever nos registradores de paginação?
+        ; Write in page registers?
         cmp esi, 0FFFCh
         jae WM1
 
-        ; Escreve na NEAR [RAM]
+        ; Write in RAM
 WM0:    and esi, 0DFFFh
-        add esi, RAM - 0C000h ; add esi, offset RAM - 0C000h
+        add esi, RAM - 0C000h
         ret
 
-        ; NEAR [RAM] Select
+        ; Select
 WM1:    cmp esi, 0FFFCh
         jne WM4
         mov BYTE [RAMSelect], al
@@ -107,7 +107,7 @@ WM1:    cmp esi, 0FFFCh
         mov DWORD [pBank2], ebx
         jmp WM0
 
-        ; Inicia bateria
+        ; Initialize battery
 WM11:   cmp BYTE [battery], 0
         jne WM2
         push eax
@@ -115,7 +115,7 @@ WM11:   cmp BYTE [battery], 0
         pop eax
         mov BYTE [battery], 1
 
-        ; Seleciona o banco da bateria
+        ; Select battery bank
 WM2:    test al, 4
         jnz WM3
         mov DWORD [pBank2], RAM_EX - 08000h
@@ -123,7 +123,7 @@ WM2:    test al, 4
 WM3:    mov DWORD [pBank2], RAM_EX - 04000h
         jmp WM0
 
-        ; Seleciona a página para o banco do DWORD [ROM]
+        ; Select ROM page
 WM4:    mov ebx, eax
         mov ah, 0
         div BYTE [ROM_size]
@@ -131,14 +131,14 @@ WM4:    mov ebx, eax
         shl eax, 14
         add eax, DWORD [ROM]
 
-        ; Banco 0
+        ; Bank 0
         cmp esi, 0FFFDh
         jne WM5
         mov DWORD [pBank0], eax
         mov eax, ebx
         jmp WM0
 
-        ; Banco 1
+        ; Bank 1
 WM5:    cmp esi, 0FFFEh
         jne WM6
         sub eax, 04000h
@@ -146,7 +146,7 @@ WM5:    cmp esi, 0FFFEh
         mov eax, ebx
         jmp WM0
 
-        ; Banco 2
+        ; Bank 2
 WM6:    sub eax, 08000h
         mov DWORD [pBank2ROM], eax
         test BYTE [RAMSelect], 8
@@ -155,7 +155,7 @@ WM6:    sub eax, 08000h
 WM66:   mov eax, ebx
         jmp WM0
 
-        ; Escreve no banco selecionado
+        ; Write in selected bank
 WM7:    mov esi, garbage
         ret
 WM8:    test BYTE [RAMSelect], 8

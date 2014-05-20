@@ -25,8 +25,8 @@ EXTERN ?OpCodeErr3@@YAXHHHH@Z
 
 SECTION .text
 
-; * Reseta a CPU
-; ****************
+; * Reset CPU
+; *************
 GLOBAL reset_CPU
 reset_CPU:
         xor eax, eax
@@ -46,8 +46,8 @@ reset_CPU:
 
         ret
 
-; * Processa uma linha
-; **********************
+; * Executes one line
+; *********************
 GLOBAL TraceLine
 TraceLine:
         inc BYTE [rR]
@@ -60,32 +60,32 @@ TLF:    cmp BYTE [TClock], 228
         jb TraceLine
         ret
 
-; * Executa interrupção BYTE [NMI] (Botão pause)
-; *****************************************
+; * NMI Interruption (pause button)
+; ***********************************
 GLOBAL int_NMI
 int_NMI:
         pusha
 
-        ; Guarda máscara de interrupção
+        ; Save interruption mask
         mov BYTE [NMI], 1
         mov al, BYTE [IFF1]
         mov BYTE [IFF2], al
         mov BYTE [IFF1], 0
 
-        ; Verifica o estado da CPU
+        ; Checks CPU state
         test BYTE [Halt], 1
         jz NMI0
         mov BYTE [Halt], 0
         inc DWORD [rPCx]
 
-        ; Empilha PC
+        ; push PC
 NMI0:   sub DWORD [rSPx], 2
         mov esi, DWORD [rSPx]
         call read_mem
         mov eax, DWORD [rPCx]
         mov [esi], ax
 
-        ; Endereço da interrupção
+        ; Jump to interruption address
         inc BYTE [rR]
         mov DWORD [rPCx], 66h
         add BYTE [TClock], 11
@@ -93,39 +93,39 @@ NMI0:   sub DWORD [rSPx], 2
         popa
         ret
 
-; * Executa interrupção
-; ***********************
+; * Z80 Interruption
+; ********************
 GLOBAL int_Z80
 int_Z80:
-        ; Verifica se a interrupção está abilitada
+        ; Checks if the interruption is enabled
         cmp BYTE [IFF1], 0
         je IZ80
 
-        ; Reseta máscaras de interrupção
+        ; Reset interruption mask
         mov BYTE [IFF1], 0
         mov BYTE [IFF2], 0
 
-        ; Verifica o estado da CPU
+        ; Checks CPU state
         test BYTE [Halt], 1
         jz Z80
         mov BYTE [Halt], 0
         inc DWORD [rPCx]
 
-        ; Empilha PC
+        ; push PC
 Z80:    sub DWORD [rSPx], 2
         mov esi, DWORD [rSPx]
         call read_mem
         mov eax, DWORD [rPCx]
         mov [esi], ax
 
-        ; Endereço da interrupção
+        ; Jump to interruption address
         inc BYTE [rR]
         mov DWORD [rPCx], 38h
         add BYTE [TClock], 13
 IZ80:   ret
 
-; * Opcode não implementado
-; ***************************
+; * Opcode not implemented (one byte)
+; *************************************
 GLOBAL _NIMP1
 _NIMP1:
         ;pusha
@@ -136,8 +136,8 @@ _NIMP1:
         ;popa
         jmp TLF
 
-; * Opcode não implementado
-; ***************************
+; * Opcode not implemented (two bytes)
+; **************************************
 GLOBAL _NIMP2
 _NIMP2:
         ;pusha
@@ -150,8 +150,8 @@ _NIMP2:
         ;popa
         jmp TLF
 
-; * Opcode não implementado
-; ***************************
+; * Opcode not implemented (three bytes)
+; ****************************************
 GLOBAL _NIMP3
 _NIMP3:
         ;pusha
@@ -166,7 +166,7 @@ _NIMP3:
         ;popa
         jmp TLF
 
-; * Opcode não Listado
+; * Opcode not listed
 ; **********************
 GLOBAL _NOLIST
 _NOLIST:
@@ -200,7 +200,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Increment register %1
+; * Increment register r
 ; ************************
 %MACRO __INCr 2
         and BYTE [Flag], 1
@@ -240,7 +240,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Decrement register pair %1
+; * Decrement register pair ss
 ; ******************************
 %MACRO __DECss 1
         dec WORD %1
@@ -282,7 +282,7 @@ _NOLIST:
         __LDrr %1, [esi], 7
 %ENDMACRO
 
-; * Load location (HL) with register %1
+; * Load location (HL) with register r
 ; **************************************
 %MACRO __LD_HL_r 1
         mov al, %1
@@ -310,7 +310,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Add operand %1 to accumulator with carry
+; * Add operand s to accumulator with carry
 ; *******************************************
 %MACRO __ADCAs 2
         mov bl, BYTE [Flag]
@@ -328,7 +328,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Subtract operand %1 from accumulator
+; * Subtract operand s from accumulator
 ; ***************************************
 %MACRO __SUBs 2
         mov BYTE [Flag], 2
@@ -344,7 +344,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Subtract operand %1 from accumulator with carry
+; * Subtract operand s from accumulator with carry
 ; **************************************************
 %MACRO __SBCAs 2
         mov bl, BYTE [Flag]
@@ -362,7 +362,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Logical AND of operand %1 to accumulator
+; * Logical AND of operand s to accumulator
 ; *******************************************
 %MACRO __ANDs 2
         mov BYTE [Flag], 10h
@@ -376,7 +376,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Exclusive OR operand r and accumulator
+; * Exclusive OR operand s and accumulator
 ; ******************************************
 %MACRO __XORs 2
         mov al, %1
@@ -389,7 +389,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Logical OR of operand %1 and accumulator
+; * Logical OR of operand s and accumulator
 ; *******************************************
 %MACRO __ORs 2
         mov al, %1
@@ -402,7 +402,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Compare operand %1 with accumulator
+; * Compare operand s with accumulator
 ; **************************************
 %MACRO __CPs 2
         mov BYTE [Flag], 2
@@ -444,7 +444,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Jump relative to PC+e if condition %1 is true
+; * Jump relative to PC+e if condition cc is true
 ; *************************************************
 %MACRO __JRccn 2
         test BYTE [Flag], %2
@@ -458,7 +458,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Call subroutine at location nn if condition CC is true
+; * Call subroutine at location nn if condition cc is true
 ; **********************************************************
 %MACRO __CALLccnn 2
         test BYTE [Flag], %2
@@ -478,7 +478,7 @@ _NOLIST:
         jmp TLF
 %ENDMACRO
 
-; * Return from subroutine if condition %1 is true
+; * Return from subroutine if condition cc is true
 ; **************************************************
 %MACRO __RETcc 2
         test BYTE [Flag], %2
@@ -577,7 +577,7 @@ _INCDE: __INCss WORD [rE]
 _INCHL: __INCss WORD [rL]
 _INCSP: __INCss DWORD [rSPx]
 
-; * INC %1 - (04,0C,14,1C,24,2C,34,3C) - 4/11 Clk - Increment operand %1
+; * INC r - (04,0C,14,1C,24,2C,34,3C) - 4/11 Clk - Increment operand r
 ; **********************************************************************
 GLOBAL _INCB, _INCC, _INCD, _INCE, _INCH, _INCL, _INC_HL, _INCA
 _INCB:  __INCr BYTE [rB], 4
@@ -606,7 +606,7 @@ INCHL:  and ah, 11010000b
         jmp TLF
 _INCA:  __INCr BYTE [rAcc], 4
 
-; * DEC s - (05,0D,15,1D,25,2D,35,3D) - 4/11 Clk - Decrement operand s
+; * DEC r - (05,0D,15,1D,25,2D,35,3D) - 4/11 Clk - Decrement operand r
 ; **********************************************************************
 GLOBAL _DECB, _DECC, _DECD, _DECE, _DECH, _DECL, _DEC_HL, _DECA
 _DECB:  __DECr BYTE [rB], 4
@@ -636,8 +636,8 @@ DECHL:  and ah, 11010000b
         jmp TLF
 _DECA:  __DECr BYTE [rAcc], 4
 
-; * LD %1, n - (06,0E,16,1E,26,2E,3E) n - 7 Clk - Load register %1 with value n
-; *********************************************************
+; * LD r, n - (06,0E,16,1E,26,2E,3E) n - 7 Clk - Load register r with value n
+; *****************************************************************************
 GLOBAL _LDBN, _LDCN, _LDDN, _LDEN, _LDHN, _LDLN, _LDAN
 _LDBN:  __LDrn BYTE [rB]
 _LDCN:  __LDrn BYTE [rC]
@@ -920,7 +920,7 @@ _CCF:
         add BYTE [TClock], 4
         jmp TLF
 
-; * LD B, %1 - (40,41,42,43,44,45,46,47) - 4/7 Clk - Load register B with operand %1
+; * LD B, r - (40,41,42,43,44,45,46,47) - 4/7 Clk - Load register B with operand r
 ; **********************************************************************************
 GLOBAL _LDBB, _LDBC, _LDBD, _LDBE, _LDBH, _LDBL, _LDB_HL, _LDBA
 _LDBB:  __LDrr BYTE [rB], BYTE [rB], 4
@@ -932,7 +932,7 @@ _LDBL:  __LDrr BYTE [rB], BYTE [rL], 4
 _LDB_HL:__LDr_HL BYTE [rB]
 _LDBA:  __LDrr BYTE [rB], BYTE [rAcc], 4
 
-; * LD C, %1 - (48,49,4A,4B,4C,4D,4E,4F) - 4/7 Clk - Load register C with operand %1
+; * LD C, r - (48,49,4A,4B,4C,4D,4E,4F) - 4/7 Clk - Load register C with operand r
 ; **********************************************************************************
 GLOBAL _LDCB, _LDCC, _LDCD, _LDCE, _LDCH, _LDCL, _LDC_HL, _LDCA
 _LDCB:  __LDrr BYTE [rC], BYTE [rB], 4
@@ -944,7 +944,7 @@ _LDCL:  __LDrr BYTE [rC], BYTE [rL], 4
 _LDC_HL:__LDr_HL BYTE [rC]
 _LDCA:  __LDrr BYTE [rC], BYTE [rAcc], 4
 
-; * LD D, %1 - (50,51,52,53,54,55,56,57) - 4/7 Clk - Load register D with operand %1
+; * LD D, r - (50,51,52,53,54,55,56,57) - 4/7 Clk - Load register D with operand r
 ; **********************************************************************************
 GLOBAL _LDDB, _LDDC, _LDDD, _LDDE, _LDDH, _LDDL, _LDD_HL, _LDDA
 _LDDB:  __LDrr BYTE [rD], BYTE [rB], 4
@@ -956,7 +956,7 @@ _LDDL:  __LDrr BYTE [rD], BYTE [rL], 4
 _LDD_HL:__LDr_HL BYTE [rD]
 _LDDA:  __LDrr BYTE [rD], BYTE [rAcc], 4
 
-; * LD E, %1 - (58,59,5A,5B,5C,5D,5E,5F) - 4/7 Clk - Load register E with operand %1
+; * LD E, r - (58,59,5A,5B,5C,5D,5E,5F) - 4/7 Clk - Load register E with operand r
 ; **********************************************************************************
 GLOBAL _LDEB, _LDEC, _LDED, _LDEE, _LDEH, _LDEL, _LDE_HL, _LDEA
 _LDEB:  __LDrr BYTE [rE], BYTE [rB], 4
@@ -968,7 +968,7 @@ _LDEL:  __LDrr BYTE [rE], BYTE [rL], 4
 _LDE_HL:__LDr_HL BYTE [rE]
 _LDEA:  __LDrr BYTE [rE], BYTE [rAcc], 4
 
-; * LD H, %1 - (60,62,63,64,65,66,67) - 4/7 Clk - Load register H with operand %1
+; * LD H, r - (60,62,63,64,65,66,67) - 4/7 Clk - Load register H with operand r
 ; *******************************************************************************
 GLOBAL _LDHB, _LDHC, _LDHD, _LDHE, _LDHH, _LDHL, _LDH_HL, _LDHA
 _LDHB:  __LDrr BYTE [rH], BYTE [rB], 4
@@ -980,7 +980,7 @@ _LDHL:  __LDrr BYTE [rH], BYTE [rL], 4
 _LDH_HL:__LDr_HL BYTE [rH]
 _LDHA:  __LDrr BYTE [rH], BYTE [rAcc], 4
 
-; * LD L, %1 - (68,69,6A,6B,6C,6D,6E,6F) - 4/7 Clk - Load register L with operand %1
+; * LD L, r - (68,69,6A,6B,6C,6D,6E,6F) - 4/7 Clk - Load register L with operand r
 ; **********************************************************************************
 GLOBAL _LDLB, _LDLC, _LDLD, _LDLE, _LDLH, _LDLL, _LDL_HL, _LDLA
 _LDLB:  __LDrr BYTE [rL], BYTE [rB], 4
@@ -992,7 +992,7 @@ _LDLL:  __LDrr BYTE [rL], BYTE [rL], 4
 _LDL_HL:__LDr_HL BYTE [rL]
 _LDLA:  __LDrr BYTE [rL], BYTE [rAcc], 4
 
-; * LD (HL), %1 - (70,71,72,73,74,75,77) - 7 Clk - Load location (HL) with register %1
+; * LD (HL), r - (70,71,72,73,74,75,77) - 7 Clk - Load location (HL) with register r
 ; ************************************************************************************
 GLOBAL _LD_HL_B, _LD_HL_C, _LD_HL_D, _LD_HL_E, _LD_HL_H, _LD_HL_L, _LD_HL_A
 _LD_HL_B:__LD_HL_r BYTE [rB]
@@ -1011,7 +1011,7 @@ _HALT:
         add BYTE [TClock], 4
         jmp TLF
 
-; * LD A, %1 - (78,79,7A,7B,7C,7D,7E,7F) - 4/7 Clk - Load register A with operand %1
+; * LD A, r - (78,79,7A,7B,7C,7D,7E,7F) - 4/7 Clk - Load register A with operand r
 ; **********************************************************************************
 GLOBAL _LDAB, _LDAC, _LDAD, _LDAE, _LDAH, _LDAL, _LDA_HL, _LDAA
 _LDAB:  __LDrr BYTE [rAcc], BYTE [rB], 4
@@ -1377,7 +1377,7 @@ _FD:
 ; * Macros
 ; ***************************************************************************************
 
-; * Rotate operand %1 left circular
+; * Rotate operand m left circular
 ; **********************************
 %MACRO __RLCr 3
         rol %1, 1
@@ -1392,7 +1392,7 @@ _FD:
         jmp TLF
 %ENDMACRO
 
-; * Rotate operand %1 right circular
+; * Rotate operand m right circular
 ; ***********************************
 %MACRO __RRCr 3
         ror %1, 1
@@ -1439,7 +1439,7 @@ _FD:
         jmp TLF
 %ENDMACRO
 
-; * Load output port (C) with register %1
+; * Load output port (C) with register r
 ; ****************************************
 %MACRO __OUT_C_r 1
         mov al, %1
@@ -1464,7 +1464,7 @@ _FD:
         jmp TLF
 %ENDMACRO
 
-; * Load location (I$+d) with register %1
+; * Load location (I$+d) with register r
 ; ****************************************
 %MACRO __LDIdr 3
         mov al, %2
@@ -1487,7 +1487,7 @@ _FD:
         jmp TLF
 %ENDMACRO
 
-; * Set bit %1 of location (HL)
+; * Set bit b of location (HL)
 ; ******************************
 %MACRO __SETb_HL 1
         movzx esi, WORD [rL]
@@ -1503,7 +1503,7 @@ _FD:
         jmp TLF
 %ENDMACRO
 
-; * Set bit %1 of location (I$+d)
+; * Set bit b of location (I$+d)
 ; ********************************
 %MACRO __SETb_Id 2
         movsx esi, BYTE [esi+2]
@@ -1513,7 +1513,7 @@ _FD:
         __SETbr %1, BYTE [esi], 23, 4
 %ENDMACRO
 
-; * Reset bit %1 of register r
+; * Reset bit b of register r
 ; *****************************
 %MACRO __RESbr 4
         and %2, ~%1
@@ -1522,7 +1522,7 @@ _FD:
         jmp TLF
 %ENDMACRO
 
-; * Reset bit %1 of location (HL)
+; * Reset bit b of location (HL)
 ; ********************************
 %MACRO __RESb_HL 1
         movzx esi, WORD [rL]
@@ -1538,7 +1538,7 @@ _FD:
         jmp TLF
 %ENDMACRO
 
-; * Reset bit %1 of location (I$+d)
+; * Reset bit b of location (I$+d)
 ; **********************************
 %MACRO __RESb_Id 2
         movsx esi, BYTE [esi+2]
@@ -1548,7 +1548,7 @@ _FD:
         __RESbr %1, BYTE [esi], 23, 4
 %ENDMACRO
 
-; * Test bit %1 of register r
+; * Test bit b of register r
 ; ****************************
 %MACRO __BITbr 4
         and BYTE [Flag], 1
@@ -1562,7 +1562,7 @@ _FD:
         jmp TLF
 %ENDMACRO
 
-; * Test bit %1 of location (HL)
+; * Test bit b of location (HL)
 ; *******************************
 %MACRO __BITb_HL 1
         movzx esi, WORD [rL]
@@ -1570,7 +1570,7 @@ _FD:
         __BITbr %1, BYTE [esi], 12, 2
 %ENDMACRO
 
-; * Test bit %1 of location (I$+d)
+; * Test bit b of location (I$+d)
 ; *******************************
 %MACRO __BITb_Id 2
         movsx esi, BYTE [esi+2]
@@ -2421,22 +2421,22 @@ _ADCA_IXd:
         call read_mem
         __ADCAs [esi], 19
 
-; SUB IXH - DD 94 - 8 Clk - Subtract IXH from accumulator
-; *********************************************************
+; * SUB IXH - DD 94 - 8 Clk - Subtract IXH from accumulator
+; ***********************************************************
 GLOBAL _SUBIXH
 _SUBIXH:
         inc DWORD [rPCx]
         __SUBs BYTE [rIX+1], 8
 
-; SUB IXL - DD 95 - 8 Clk - Subtract IXL from accumulator
-; *********************************************************
+; * SUB IXL - DD 95 - 8 Clk - Subtract IXL from accumulator
+; ***********************************************************
 GLOBAL _SUBIXL
 _SUBIXL:
         inc DWORD [rPCx]
         __SUBs BYTE [rIX], 8
 
-; SUB (IX+d) - DD 96 d - 19 Clk - Subtract location (IX+d) from accumulator
-; ***************************************************************************
+; * SUB (IX+d) - DD 96 d - 19 Clk - Subtract location (IX+d) from accumulator
+; *****************************************************************************
 GLOBAL _SUB_IXd
 _SUB_IXd:
         add DWORD [rPCx], 2
@@ -2446,8 +2446,8 @@ _SUB_IXd:
         call read_mem
         __SUBs [esi], 19
 
-; SBC A, (IX+d) - DD 9E d - 19 Clk - Subtract location (IX+d) from accumulator with carry
-; *****************************************************************************************
+; * SBC A, (IX+d) - DD 9E d - 19 Clk - Subtract location (IX+d) from accumulator with carry
+; *******************************************************************************************
 GLOBAL _SBCA_IXd
 _SBCA_IXd:
         add DWORD [rPCx], 2
@@ -2594,7 +2594,7 @@ _JP_IX:
         jmp TLF
 
 ; * LD SP, IX - DD F9 - 10 Clk - Load SP with IX
-; *********************************************
+; ************************************************
 GLOBAL _LDSPIX
 _LDSPIX:
         mov eax, DWORD [rIX]
@@ -2786,7 +2786,7 @@ _RETN:
         add BYTE [TClock], 14
         jmp TLF
 
-; * BYTE [IM] 0 - ED (46,56,5E) - 8 Clk - Set interrupt mode m
+; * IM 0 - ED (46,56,5E) - 8 Clk - Set interrupt mode m
 ; *******************************************************
 GLOBAL _IM0, _IM1, _IM2
 _IM0:   __IM 0
@@ -3436,22 +3436,22 @@ _ADCA_IYd:
         call read_mem
         __ADCAs [esi], 19
 
-; SUB IYH - FD 94 - 8 Clk - Subtract IYH from accumulator
-; *********************************************************
+; * SUB IYH - FD 94 - 8 Clk - Subtract IYH from accumulator
+; ***********************************************************
 GLOBAL _SUBIYH
 _SUBIYH:
         inc DWORD [rPCx]
         __SUBs BYTE [rIY+1], 8
 
-; SUB IYL - FD 95 - 8 Clk - Subtract IYL from accumulator
-; *********************************************************
+; * SUB IYL - FD 95 - 8 Clk - Subtract IYL from accumulator
+; ***********************************************************
 GLOBAL _SUBIYL
 _SUBIYL:
         inc DWORD [rPCx]
         __SUBs BYTE [rIY], 8
 
-; SUB (IY+d) - FD 96 d - 19 Clk - Subtract location (IY+d) from accumulator
-; ***************************************************************************
+; * SUB (IY+d) - FD 96 d - 19 Clk - Subtract location (IY+d) from accumulator
+; *****************************************************************************
 GLOBAL _SUB_IYd
 _SUB_IYd:
         add DWORD [rPCx], 2
@@ -3461,8 +3461,8 @@ _SUB_IYd:
         call read_mem
         __SUBs [esi], 19
 
-; SBC A, (IY+d) - FD 9E d - 19 Clk - Subtract location (IY+d) from accumulator with carry
-; *****************************************************************************************
+; * SBC A, (IY+d) - FD 9E d - 19 Clk - Subtract location (IY+d) from accumulator with carry
+; *******************************************************************************************
 GLOBAL _SBCA_IYd
 _SBCA_IYd:
         add DWORD [rPCx], 2
@@ -3732,7 +3732,7 @@ _SET7_IYd:__SETb_Id 80h, DWORD [rIY]
 
 SECTION .data
 
-; Tabela de opcodes
+; Opcode table
 GLOBAL Opcode
 Opcode:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
@@ -3769,7 +3769,7 @@ Opcode:
     DD _RETP,    _POPAF,   _JPPN,    _DI,      _CALLPN,  _PUSHAF,  _ORN,     _RST30
     DD _RETM,    _LDSPHL,  _JPMN,    _EI,      _CALLMN,  _FD,      _CPN,     _RST38     ; F
 
-; Tabela de opcodes (CB)
+; Opcode table  (CB)
 GLOBAL OpcodeCB
 OpcodeCB:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
@@ -3806,7 +3806,7 @@ OpcodeCB:
     DD _SET6B,   _SET6C,   _SET6D,   _SET6E,   _SET6H,   _SET6L,   _SET6_HL, _SET6A
     DD _SET7B,   _SET7C,   _SET7D,   _SET7E,   _SET7H,   _SET7L,   _SET7_HL, _SET7A     ; F
 
-; Tabela de opcodes (DD)
+; Opcode table (DD)
 GLOBAL OpcodeDD
 OpcodeDD:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
@@ -3843,7 +3843,7 @@ OpcodeDD:
     DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
     DD _NOP,     _LDSPIX,  _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; F
 
-; Tabela de opcodes (DD CB)
+; Opcode table (DD CB)
 GLOBAL OpcodeDDCB
 OpcodeDDCB:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
@@ -3880,7 +3880,7 @@ OpcodeDDCB:
     DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET6_IXd,_NIMP3
     DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET7_IXd,_NIMP3     ; F
 
-; Tabela de opcodes (ED)
+; Opcode table (ED)
 GLOBAL OpcodeED
 OpcodeED:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
@@ -3917,7 +3917,7 @@ OpcodeED:
     DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
     DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; F
 
-; Tabela de opcodes (FD)
+; Opcode table (FD)
 GLOBAL OpcodeFD
 OpcodeFD:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
@@ -3954,7 +3954,7 @@ OpcodeFD:
     DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
     DD _NOP,     _LDSPIY,  _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; F
 
-; Tabela de opcodes (FD CB)
+; Opcode table (FD CB)
 GLOBAL OpcodeFDCB
 OpcodeFDCB:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F

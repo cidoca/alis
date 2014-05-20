@@ -21,20 +21,20 @@
 
 SECTION .text
 
-; * Reseta VDP
-; **************
+; * Reset VDP
+; *************
 GLOBAL reset_VDP
 reset_VDP:
         push edi
 
-        ; Inicia VDP Control
+        ; Initialize VDP controls
         xor eax, eax
         mov BYTE [cVDP], al
         mov BYTE [VDPLow], al
         mov BYTE [VDPStatus], al
         mov BYTE [LineInt], al
 
-        ; Limpa registradores, palheta de cores e memória de vídeo
+        ; Clear registers, palette and video memory
         mov ecx, (4+16+32+4000h)/4
         mov edi, pRAM
         rep stosd
@@ -42,8 +42,8 @@ reset_VDP:
         pop edi
         ret
 
-; * Gera um frame
-; *****************
+; * Render a frame
+; ******************
 GLOBAL scan_frame
 scan_frame:
         push ebx
@@ -51,13 +51,13 @@ scan_frame:
         push edi
         push ebp
 
-        ; Limpa o frame
+        ; Clear buffer
         xor eax, eax
         mov ecx, 256 * 192
-        mov edi, [esp+20]		; Param buffer
+        mov edi, [esp+20]       ; Param buffer
         rep stosd
 
-        ; Começa um novo frame
+        ; Start a new frame
         mov DWORD [ScanLine], 0
         mov al, BYTE [VDPR+10]  ; Line Counter
         cmp al, 192
@@ -65,10 +65,10 @@ scan_frame:
         dec al
 SF00:   mov BYTE [VDPCounter], al
 
-        ; Processa cada scanline
+        ; Executes each scanline
 SF0:    call TraceLine
 
-        ; Renderiza este scanline
+        ; Renders last scanline
         cmp DWORD [ScanLine], 192
         jae SF1
         test BYTE [VDPR+1], 40h
@@ -79,42 +79,41 @@ SF0:    call TraceLine
         je SF1
         call render_background_layer2
 
-        ; Linhas 0-192
+        ; Lines 0-192
 SF1:    cmp DWORD [ScanLine], 192
         ja SF5
 
-        ; Seta bit 7 do VDP Status se a linha for igual a 192
+        ; Frame Interrupt on line 192
         jne SF2
         or BYTE [VDPStatus], 80h    ; Frame Interrupt pendente
 
-        ; Checa Line Interrupt
+        ; Checks Line Interrupt
 SF2:    cmp BYTE [VDPCounter], 0
         jne SF3
-        mov al, BYTE [VDPR+10]  ; Line Counter
+        mov al, BYTE [VDPR+10]      ; Line Counter
         mov BYTE [VDPCounter], al
-        mov BYTE [LineInt], 1       ; Line Interrupt pendente
+        mov BYTE [LineInt], 1       ; Line Interrupt pending
         jmp SF4
 
-        ; Decrementa o contador do Line Interrupt
 SF3:    dec BYTE [VDPCounter]
 
-        ; Se a interrupção está pendente e abilitada, gere-a
+        ; Trigger Line Interruption
         cmp BYTE [LineInt], 0
         je SF6
-SF4:    test BYTE [VDPR+0], 10h ; Line Interrupt
+SF4:    test BYTE [VDPR+0], 10h     ; Line Interrupt
         jz SF6
         call int_Z80
         jmp SF6
 
-        ; Linhas 193-261
-SF5:    mov al, BYTE [VDPR+10]  ; Line Counter
+        ; Lines 193-261
+SF5:    mov al, BYTE [VDPR+10]      ; Line Counter
         mov BYTE [VDPCounter], al
 
         cmp DWORD [ScanLine], 224
         jae SF6
         test BYTE [VDPStatus], 80h  ; Frame Interrupt pendente
         jz SF6
-        test BYTE [VDPR+1], 20h ; Frame Interrupt
+        test BYTE [VDPR+1], 20h     ; Frame Interrupt
         jz SF6
         call int_Z80
 
@@ -129,22 +128,10 @@ SF6:    sub BYTE [TClock], 228
         pop ebx
         ret
 
-; * Renderiza uma linha
-; ***********************
+; * Render one line
+; *******************
 render_background_layer:
         mov BYTE [RenderBL2], 0
-
-;       mov eax, DWORD [ScanLine]
-;       shr eax, 3
-;       shl eax, 6
-;       mov esi, VRAM
-;       add esi, eax
-;       movzx eax, BYTE [VDPR+2]
-;       shl eax, 10
-;       and eax, 3800h
-;       add eax, 48
-;       add esi, eax
-;       mov scrolly, esi
 
         movzx eax, BYTE [VDPR+9]
         add eax, DWORD [ScanLine]
@@ -163,12 +150,12 @@ RL000:  shr eax, 3
 
         mov eax, DWORD [ScanLine]
         shl eax, 10
-        mov edi, [esp+24]			; Param buffer (after one call instruction)
+        mov edi, [esp+24]           ; Param buffer (after one call instruction)
         add edi, eax
 
         mov DWORD [scrollx], 0
 
-        ; Ocuta as duas primeiras linhas
+        ; Hide first two lines
         test BYTE [VDPR+0], 40h
         jz RL00
         cmp DWORD [ScanLine], 16
@@ -184,22 +171,15 @@ RL01:   movzx ebx, BYTE [VDPR+9]
         shl ebx, 2
 
         mov ch, 32
-RL0:;   cmp ch, 8
-;       jne RL_0
-;       mov esi, scrolly
 RL_0:   movzx edx, WORD [esi]
         add esi, 2
 
-        ; Usar palheta do sprite?
+        ; Sprite palette?
         mov DWORD [pal], edx
         and DWORD [pal], 0800h
         shr DWORD [pal], 7
-;       mov DWORD [pal], 0                      *
-;       test byte ptr [esi-1], 8h       * 
-;       jz RL_00                        * Obsoleto
-;       mov DWORD [pal], 16                     *
 
-RL_00:  test BYTE [esi-1], 10h  ; Tile na frente do sprite (renderiza depois)
+RL_00:  test BYTE [esi-1], 10h      ; Tile in front layer (renders after)
         jz RL11
         mov BYTE [RenderBL2], 1
         mov eax, DWORD [pal]
@@ -233,19 +213,19 @@ RL_00:  test BYTE [esi-1], 10h  ; Tile na frente do sprite (renderiza depois)
         and edx, 3FFh
         mov DWORD [scrollx], edx
         dec ch
-        jnz RL0
+        jnz RL_0
         ret
 
 RL11:   and edx, 1FFh
         shl edx, 5
         mov eax, ebx
-        test BYTE [esi-1], 4h   ; Flip Vertical
+        test BYTE [esi-1], 4h       ; Flip Vertical
         jz RL12
         mov eax, 28
         sub eax, ebx
 
 RL12:   mov ebp, DWORD [VRAM+edx+eax]
-        test BYTE [esi-1], 2h   ; Flip Horizontal
+        test BYTE [esi-1], 2h       ; Flip Horizontal
         jnz RL22
 
         mov cl, 8
@@ -273,7 +253,7 @@ RL1:    mov eax, ebp
         dec cl
         jnz RL1
         dec ch
-        jnz RL0
+        jnz RL_0
         ret
 
 RL22:   mov cl, 8
@@ -300,11 +280,11 @@ RL3:    mov eax, ebp
         dec cl
         jnz RL3
         dec ch
-        jnz RL0
+        jnz RL_0
         ret
 
-; * Renderiza uma linha
-; ***********************
+; * Render one line in front layer
+; **********************************
 render_background_layer2:
         movzx eax, BYTE [VDPR+9]
         add eax, DWORD [ScanLine]
@@ -323,12 +303,12 @@ RBL000: shr eax, 3
 
         mov eax, DWORD [ScanLine]
         shl eax, 10
-        mov edi, [esp+24]			; Param buffer (after one call instruction)
+        mov edi, [esp+24]               ; Param buffer (after one call instruction)
         add edi, eax
 
         mov DWORD [scrollx], 0
 
-        ; Ocuta as duas primeiras linhas
+        ; Hide first two lines
         test BYTE [VDPR+0], 40h
         jz RBL00
         cmp DWORD [ScanLine], 16
@@ -344,33 +324,30 @@ RBL01:  movzx ebx, BYTE [VDPR+9]
         shl ebx, 2
 
         mov ch, 32
-RBL0:;  cmp ch, 8
-;       jne RL_0
-;       mov esi, scrolly
 RBL_0:  movzx edx, WORD [esi]
         add esi, 2
 
-        test BYTE [esi-1], 10h  ; Tile na frente do sprite (renderiza depois)
+        test BYTE [esi-1], 10h          ; Tile in front layer (renders now)
         jnz RBL_00
         add DWORD [scrollx], 8*4
         and DWORD [scrollx], 3FFh
         dec ch
-        jnz RBL0
+        jnz RBL_0
         ret
 
 RBL_00: and edx, 1FFh
         shl edx, 5
         mov eax, ebx
-        test BYTE [esi-1], 4h   ; Flip Vertical
+        test BYTE [esi-1], 4h           ; Flip Vertical
         jz RBL11
         mov eax, 28
         sub eax, ebx
 RBL11:  mov DWORD [pal], 0
-        test BYTE [esi-1], 8h   ; Usar palheta de sprite
+        test BYTE [esi-1], 8h           ; Sprite palette
         jz RBL12
         mov DWORD [pal], 16
 RBL12:  mov ebp, DWORD [VRAM+edx+eax]
-        test BYTE [esi-1], 2h   ; Flip Horizontal
+        test BYTE [esi-1], 2h           ; Flip Horizontal
         jnz RBL22
 
         mov cl, 8
@@ -401,7 +378,7 @@ RBL14:  add edx, 4
         dec cl
         jnz RBL1
         dec ch
-        jnz RBL0
+        jnz RBL_0
         ret
 
 RBL22:  mov cl, 8
@@ -431,11 +408,11 @@ RBL5:   add edx, 4
         dec cl
         jnz RBL3
         dec ch
-        jnz RBL0
+        jnz RBL_0
         ret
 
-; * Renderiza uma linha da camada de sprite
-; *******************************************
+; * Render one sprite line
+; **************************
 render_sprite_layer:
         xor ecx, ecx
         mov esi, VRAM + 3F00h
@@ -461,7 +438,7 @@ RSL00:  mov DWORD [sb], 0
 
 RSL01:  mov eax, DWORD [ScanLine]
         shl eax, 10
-        mov edi, [esp+24]			; Param buffer (after one call instruction)
+        mov edi, [esp+24]               ; Param buffer (after one call instruction)
         add edi, eax
         mov DWORD [vb], edi
 
@@ -471,8 +448,6 @@ RSL01:  mov eax, DWORD [ScanLine]
 
 RSL0:   mov al, BYTE [sl]
         mov ah, [esi+ecx]
-;       cmp ah, 208
-;       je RSL2
         sub al, ah
         cmp al, BYTE [s8x]
         jae RSL1
@@ -516,8 +491,6 @@ RSL4:   add edi, 4
 
 RSL1:   dec cl
         jnl RSL0
-;       cmp cl, 64
-;       jb RSL0
 RSL2:   ret
 
 
@@ -537,16 +510,14 @@ palette:
 SECTION .bss
 
 scrollx     RESD 1
-;scrolly        RESD 1
 pal         RESD 1
 vb          RESD 1
 sl          RESB 1
-;sl2            RESD 1
 sb          RESD 1
 s8x         RESB 1
 RenderBL2   RESB 1
 
 GLOBAL ScanLine, LineInt, VDPCounter
-ScanLine    RESD 1          ; Scanline atual
-LineInt     RESB 1          ; Line Interrupt pendente
+ScanLine    RESD 1          ; Current scanline
+LineInt     RESB 1          ; Line Interrupt pending
 VDPCounter  RESB 1          ; Line Interrupt Counter
