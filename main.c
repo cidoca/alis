@@ -414,7 +414,7 @@ void main_loop()
     SDL_Event event;
     void *buffer;
     unsigned int t, t2;
-    SDL_Rect rect = {8, 0, 256, 192};
+    SDL_Rect rect_clipped = {8, 0, 256, 192}, rect = {0, 0, 256, 192};
 
     if (audio_present)
         SDL_PauseAudio(0);
@@ -443,7 +443,7 @@ void main_loop()
         scan_frame(buffer);
         draw_message(buffer, t);
         SDL_UnlockTexture(texture);
-        SDL_RenderCopy(renderer, texture, VDPR & 0x20 ? &rect : NULL,  NULL);
+        SDL_RenderCopy(renderer, texture, VDPR & 0x20 ? &rect_clipped : &rect,  NULL);
         SDL_RenderPresent(renderer);
 
         t2 = SDL_GetTicks();
@@ -471,7 +471,7 @@ void init_SDL(char *filename)
     win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 192);
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 193);
 
     // Setup keyboard and joysticks
     keys = (Uint8*)SDL_GetKeyboardState(NULL);
