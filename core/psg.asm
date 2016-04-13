@@ -15,7 +15,7 @@
 ; along with this program.  If not, see [http://www.gnu.org/licenses/].
 
 
-FREQUENCY   EQU 44160
+FREQUENCY   EQU 48000
 BUFFERSIZE  EQU FREQUENCY / 60
 
 %INCLUDE "data.inc"
