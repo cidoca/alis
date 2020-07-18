@@ -1,5 +1,5 @@
 ; Alis, A SEGA Master System emulator
-; Copyright (C) 2002-2014 Cidorvan Leite
+; Copyright (C) 2002-2020 Cidorvan Leite
 
 ; This program is free software: you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -20,10 +20,10 @@ SECTION .bss
 ; **** BANKS ****
 GLOBAL pData, pBank0, pBank1, pBank2, pBank2ROM, battery, RAMSelect
 pData:              ; Alias for start pointer for state block
-pBank0      RESD 1
-pBank1      RESD 1
-pBank2      RESD 1
-pBank2ROM   RESD 1
+pBank0      RESQ 1
+pBank1      RESQ 1
+pBank2      RESQ 1
+pBank2ROM   RESQ 1
 battery     RESB 1
 RAMSelect   RESB 1
 
@@ -101,7 +101,7 @@ cVDP        RESB 1          ; First or second write in BFh port
 VDPLow      RESB 1          ; Temporary value for BFh port
 
 GLOBAL pRAM, VDPR, CRAM, VRAM
-pRAM    RESD 1              ; Pointer for palette or video memory
+pRAM    RESQ 1              ; Pointer for palette or video memory
 VDPR    RESB 16             ; Video registers
 CRAM    RESB 32             ; Color palette
 VRAM    RESB 4000h          ; Video memory

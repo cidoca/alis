@@ -1,6 +1,6 @@
 /*
   Alis, A SEGA Master System emulator
-  Copyright (C) 2002-2014 Cidorvan Leite
+  Copyright (C) 2002-2020 Cidorvan Leite
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -91,27 +91,27 @@ void save_battery()
 
 void save_state(int fd)
 {
-    pBank0 -= (unsigned)ROM;
-    pBank1 -= (unsigned)ROM;
-    pBank2 -= (unsigned)ROM;
-    pBank2ROM -= (unsigned)ROM;
+    pBank0 -= (unsigned long)ROM;
+    pBank1 -= (unsigned long)ROM;
+    pBank2 -= (unsigned long)ROM;
+    pBank2ROM -= (unsigned long)ROM;
 
     write(fd, pData, (battery ? pDataXEnd : pDataEnd) - pData);
 
-    pBank0 += (unsigned)ROM;
-    pBank1 += (unsigned)ROM;
-    pBank2 += (unsigned)ROM;
-    pBank2ROM += (unsigned)ROM;
+    pBank0 += (unsigned long)ROM;
+    pBank1 += (unsigned long)ROM;
+    pBank2 += (unsigned long)ROM;
+    pBank2ROM += (unsigned long)ROM;
 }
 
 void load_state(int fd)
 {
     read(fd, pData, (battery ? pDataXEnd : pDataEnd) - pData);
 
-    pBank0 += (unsigned)ROM;
-    pBank1 += (unsigned)ROM;
-    pBank2 += (unsigned)ROM;
-    pBank2ROM += (unsigned)ROM;
+    pBank0 += (unsigned long)ROM;
+    pBank1 += (unsigned long)ROM;
+    pBank2 += (unsigned long)ROM;
+    pBank2ROM += (unsigned long)ROM;
 }
 
 int stop_record_play()
@@ -226,6 +226,7 @@ void open_ROM(char *filename)
 
     // Initialize core engine
     init_banks(size / 32);
+    init_battery();
     reset_CPU();
     reset_VDP();
     reset_PSG();

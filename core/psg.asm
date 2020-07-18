@@ -1,5 +1,5 @@
 ; Alis, A SEGA Master System emulator
-; Copyright (C) 2002-2014 Cidorvan Leite
+; Copyright (C) 2002-2020 Cidorvan Leite
 
 ; This program is free software: you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -28,24 +28,24 @@ GLOBAL reset_PSG
 reset_PSG:
         ; Clear sound registers
         xor eax, eax
-        mov DWORD [rVol1], eax
-        mov DWORD [rFreq1], eax
-        mov DWORD [rFreq2], eax
-        mov DWORD [rFreq3], eax
-        mov DWORD [rFreq4], eax
-        mov DWORD [rLast], eax
+        mov [rVol1], eax
+        mov [rFreq1], eax
+        mov [rFreq2], eax
+        mov [rFreq3], eax
+        mov [rFreq4], eax
+        mov [rLast], eax
 
         ; Initialize noise
         mov DWORD [Noise], 1
         mov DWORD [FeedBack], 8000h
-        mov BYTE [NoiseFreq2], al
+        mov [NoiseFreq2], al
 
         ; Initialize periods
-        mov BYTE [Signal], al
+        mov [Signal], al
         mov DWORD [Period1], FREQUENCY
         mov DWORD [Period2], FREQUENCY
         mov DWORD [Period3], FREQUENCY
-        mov DWORD [Period4], eax
+        mov [Period4], eax
 
         ret
 
@@ -64,7 +64,7 @@ write_PSG:
         ; Volume
         not al
         and al, 0Fh
-        mov BYTE [rVol1+ebx], al
+        mov [rVol1+ebx], al
         ret
 
         ; Frequency (first write)
@@ -72,14 +72,14 @@ PSGW0:  cmp bl, 3
         je PSGW01
         and al, 0Fh
         and DWORD [rFreq1+ebx*4], 3F0h
-        or BYTE [rFreq1+ebx*4], al
+        or [rFreq1+ebx*4], al
         cmp bl, 2
         jne PSGW00
         cmp BYTE [NoiseFreq2], 0
         je PSGW00
         and DWORD [rFreq4], 3F0h
-        or BYTE [rFreq4], al
-PSGW00: mov DWORD [rLast], ebx
+        or [rFreq4], al
+PSGW00: mov [rLast], ebx
         ret
 
         ; Noise
@@ -96,123 +96,113 @@ PSGW03: and al, 3
         mov cl, al
         mov eax, 16
         shl al, cl
-        mov DWORD [rFreq4], eax
+        mov [rFreq4], eax
         ret
 PSGW04: mov BYTE [NoiseFreq2], 1
-        mov eax, DWORD [rFreq3]
-        mov DWORD [rFreq4], eax
+        mov eax, [rFreq3]
+        mov [rFreq4], eax
         ret
 
         ; Frequency (second write)
-PSGW1:  mov ebx, DWORD [rLast]
+PSGW1:  mov ebx, [rLast]
         shl eax, 4
         and eax, 3F0h
         and DWORD [rFreq1+ebx*4], 0Fh
-        or DWORD [rFreq1+ebx*4], eax
+        or [rFreq1+ebx*4], eax
         cmp bl, 2
         jne PSGW2
         cmp BYTE [NoiseFreq2], 0
         je PSGW2
         and DWORD [rFreq4], 0Fh
-        or DWORD [rFreq4], eax
+        or [rFreq4], eax
 PSGW2:  ret
 
 ; * Updates buffer
 ; ******************
 GLOBAL make_PSG
 make_PSG:
-        push ebx
-        push esi
-        push edi
-        push ebp
-        mov esi, [esp+24]   ; Second parameter (stream)
-
         ; Clear buffer
-        mov eax, 80808080h
-        mov ecx, BUFFERSIZE / 4
-        mov edi, esi
-        rep stosd
+        mov rax, 8080808080808080h
+        mov ecx, BUFFERSIZE / 8
+        mov rdi, rsi
+        rep stosq
 
         ; Generates channel 1
-        mov al, BYTE [rVol1]
+        mov al, [rVol1]
         mov ah, 1
-        test BYTE [Signal], ah
+        test [Signal], ah
         jz MPS01
         neg al
-MPS01:  mov ebx, DWORD [rFreq1]
-        movzx ebx, WORD [Frequencia+ebx*2]
-        cmp ebx, FREQUENCY
+MPS01:  mov r8d, [rFreq1]
+        movzx r8d, WORD [Frequencia+r8d*2]
+        cmp r8d, FREQUENCY
         ja MPS2
-        mov edx, DWORD [Period1]
+        mov edx, [Period1]
         call square_wave
-        mov DWORD [Period1], edx
+        mov [Period1], edx
 
         ; Generates channel 2
-MPS2:   mov al, BYTE [rVol2]
+MPS2:   mov al, [rVol2]
         mov ah, 2
-        test BYTE [Signal], ah
+        test [Signal], ah
         jz MPS02
         neg al
-MPS02:  mov ebx, DWORD [rFreq2]
-        movzx ebx, WORD [Frequencia+ebx*2]
-        cmp ebx, FREQUENCY
+MPS02:  mov r8d, [rFreq2]
+        movzx r8d, WORD [Frequencia+r8d*2]
+        cmp r8d, FREQUENCY
         ja MPS4
-        mov edx, DWORD [Period2]
+        mov edx, [Period2]
         call square_wave
-        mov DWORD [Period2], edx
+        mov [Period2], edx
 
         ; Generates channel 3
-MPS4:   mov al, BYTE [rVol3]
+MPS4:   mov al, [rVol3]
         mov ah, 4
-        test BYTE [Signal], ah
+        test [Signal], ah
         jz MPS04
         neg al
-MPS04:  mov ebx, DWORD [rFreq3]
-        movzx ebx, WORD [Frequencia+ebx*2]
-        cmp ebx, FREQUENCY
+MPS04:  mov r8d, [rFreq3]
+        movzx r8d, WORD [Frequencia+r8d*2]
+        cmp r8d, FREQUENCY
         ja MPS6
-        mov edx, DWORD [Period3]
+        mov edx, [Period3]
         call square_wave
-        mov DWORD [Period3], edx
+        mov [Period3], edx
 
         ; Generates channel 4
-MPS6:   mov ah, BYTE [rVol4]
+MPS6:   mov ah, [rVol4]
         shl ah, 1
-        mov ebx, DWORD [rFreq4]
-        movzx ebx, WORD [Frequencia+ebx*2]
-        cmp ebx, FREQUENCY
+        mov r8d, [rFreq4]
+        movzx r8d, WORD [Frequencia+r8d*2]
+        cmp r8d, FREQUENCY
         ja MPS66
         mov ecx, BUFFERSIZE
-        mov edx, DWORD [Period4]
-        mov ebp, DWORD [FeedBack]
-        mov edi, esi
+        mov edx, [Period4]
+        mov r9d, [FeedBack]
+        mov rdi, rsi
         call WPNoise
-        mov DWORD [Period4], edx
+        mov [Period4], edx
 
-MPS66:  pop ebp
-        pop edi
-        pop esi
-        pop ebx
-        ret
+MPS66:  ret
 
 ; * Generates a squera wave
 ; ***************************
 GLOBAL square_wave
 square_wave:
         mov ecx, BUFFERSIZE
-        mov edi, esi
+        mov rdi, rsi
 
 SW0:    jecxz SW1
         dec ecx
 
-        add [edi], al
-        inc edi
+        add [rdi], al
+        inc rdi
 
-        sub edx, ebx
+        sub edx, r8d
         jg SW0
 
         neg al
-        xor BYTE [Signal], ah
+        xor [Signal], ah
         add edx, FREQUENCY
         jmp SW0
 
@@ -227,15 +217,15 @@ WPNoise:
         mov al, 0
         jmp WPN1
 WPN0:   mov al, ah
-        xor DWORD [Noise], ebp
+        xor [Noise], r9d
 WPN1:   shr DWORD [Noise], 1
 
         add edx, FREQUENCY
 WPN2:   jecxz WPN3
-        add [edi], al
-        inc edi
+        add [rdi], al
+        inc rdi
         dec ecx
-        sub edx, ebx
+        sub edx, r8d
         jns WPN2
         jmp WPNoise
 

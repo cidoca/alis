@@ -8,7 +8,7 @@ libcore.a: $(OBJECTS)
 
 %.o: %.asm
 	@echo Compiling $<
-	@$(ASM) -felf $<
+	@$(ASM) -felf64 $<
 
 clean:
 	@rm -f *.a *.o

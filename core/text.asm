@@ -1,5 +1,5 @@
 ; Alis, A SEGA Master System emulator
-; Copyright (C) 2002-2014 Cidorvan Leite
+; Copyright (C) 2002-2020 Cidorvan Leite
 
 ; This program is free software: you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -21,69 +21,58 @@ SECTION .text
 
 GLOBAL draw_text
 draw_text:
-        push ebx
-        push esi
-        push edi
+        shl rdx, 8
+        add rdx, rsi
+        shl rdx, 2
+        add rdi, rdx
 
-        mov edi, [esp+16]       ; Param surface
-        mov eax, [esp+24]       ; Param y
-        shl eax, 8
-        add eax, [esp+20]       ; Param x
-        shl eax, 2
-        add edi, eax
-        mov ebx, [esp+28]       ; Param text
-        mov edx, [esp+32]       ; Param color
-
-DT0:    movzx eax, BYTE [ebx]
-        inc ebx
+DT0:    movzx eax, BYTE [rcx]
+        inc rcx
         test al, al
         jz DT9
 
         cmp al, ' '
         jne DT1
-        add edi, WIDTH * 4
+        add rdi, WIDTH * 4
         jmp DT0
 
 DT1:    cmp al, 'A'
         jb DT2
-        mov esi, FontAlpha
+        mov rsi, FontAlpha
         sub al, 'A'
         jmp DT4
 
 DT2:    cmp al, '0'
         jb DT3
-        mov esi, FontNum
+        mov rsi, FontNum
         sub al, '0'
         jmp DT4
 
-DT3:    mov esi, FontX
+DT3:    mov rsi, FontX
         jmp DT5
 
 DT4:    shl eax, 3
-        add esi, eax
+        add rsi, rax
 
-DT5:    mov ch, HEIGHT
-DT6:    mov cl, WIDTH
-        mov al, [esi]
+DT5:    mov dh, HEIGHT
+DT6:    mov dl, WIDTH
+        mov al, [rsi]
 DT7:    test al, 080h
         jz DT8
-        mov DWORD [edi], edx
-DT8:    add edi, 4
+        mov [rdi], r8d
+DT8:    add rdi, 4
         shl al, 1
-        dec cl
+        dec dl
         jnz DT7
-        inc esi
-        add edi, (256 - WIDTH) * 4
-        dec ch
+        inc rsi
+        add rdi, (256 - WIDTH) * 4
+        dec dh
         jnz DT6
 
-        sub edi, (256 * HEIGHT - WIDTH) * 4
+        sub rdi, (256 * HEIGHT - WIDTH) * 4
         jmp DT0
 
-DT9:    pop edi
-        pop esi
-        pop ebx
-        ret
+DT9:    ret
 
 
 SECTION .data

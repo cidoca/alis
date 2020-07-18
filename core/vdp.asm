@@ -1,5 +1,5 @@
 ; Alis, A SEGA Master System emulator
-; Copyright (C) 2002-2014 Cidorvan Leite
+; Copyright (C) 2002-2020 Cidorvan Leite
 
 ; This program is free software: you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -25,45 +25,40 @@ SECTION .text
 ; *************
 GLOBAL reset_VDP
 reset_VDP:
-        push edi
-
         ; Initialize VDP controls
         xor eax, eax
-        mov BYTE [cVDP], al
-        mov BYTE [VDPLow], al
-        mov BYTE [VDPStatus], al
-        mov BYTE [LineInt], al
+        mov [cVDP], al
+        mov [VDPLow], al
+        mov [VDPStatus], al
+        mov [LineInt], al
 
         ; Clear registers, palette and video memory
-        mov ecx, (4+16+32+4000h)/4
-        mov edi, pRAM
-        rep stosd
+        mov ecx, (8+16+32+4000h)/8
+        mov rdi, pRAM
+        rep stosq
 
-        pop edi
         ret
 
 ; * Render a frame
 ; ******************
 GLOBAL scan_frame
 scan_frame:
-        push ebx
-        push esi
-        push edi
-        push ebp
+        push rbx
+
+        mov r10, rdi
 
         ; Clear buffer
-        xor eax, eax
-        mov ecx, 256 * 192
-        mov edi, [esp+20]       ; Param buffer
-        rep stosd
+        xor rax, rax
+        mov ecx, 256 * 192 / 2
+        rep stosq
 
         ; Start a new frame
         mov DWORD [ScanLine], 0
-        mov al, BYTE [VDPR+10]  ; Line Counter
+        mov al, [VDPR+10]           ; Line Counter
         cmp al, 192
         jne SF00
         dec al
-SF00:   mov BYTE [VDPCounter], al
+SF00:   mov [VDPCounter], al
 
         ; Executes each scanline
 SF0:    call TraceLine
@@ -90,8 +85,8 @@ SF1:    cmp DWORD [ScanLine], 192
         ; Checks Line Interrupt
 SF2:    cmp BYTE [VDPCounter], 0
         jne SF3
-        mov al, BYTE [VDPR+10]      ; Line Counter
-        mov BYTE [VDPCounter], al
+        mov al, [VDPR+10]      ; Line Counter
+        mov [VDPCounter], al
         mov BYTE [LineInt], 1       ; Line Interrupt pending
         jmp SF4
 
@@ -106,8 +101,8 @@ SF4:    test BYTE [VDPR+0], 10h     ; Line Interrupt
         jmp SF6
 
         ; Lines 193-261
-SF5:    mov al, BYTE [VDPR+10]      ; Line Counter
-        mov BYTE [VDPCounter], al
+SF5:    mov al, [VDPR+10]      ; Line Counter
+        mov [VDPCounter], al
 
         cmp DWORD [ScanLine], 224
         jae SF6
@@ -122,10 +117,7 @@ SF6:    sub BYTE [TClock], 228
         cmp DWORD [ScanLine], 262
         jb SF0
 
-        pop ebp
-        pop edi
-        pop esi
-        pop ebx
+        pop rbx
         ret
 
 ; * Render one line
@@ -134,24 +126,24 @@ render_background_layer:
         mov BYTE [RenderBL2], 0
 
         movzx eax, BYTE [VDPR+9]
-        add eax, DWORD [ScanLine]
+        add eax, [ScanLine]
         cmp eax, 224
         jb RL000
         sub eax, 224
 
 RL000:  shr eax, 3
         shl eax, 6
-        mov esi, VRAM
-        add esi, eax
+        mov rsi, VRAM
+        add rsi, rax
         movzx eax, BYTE [VDPR+2]
         shl eax, 10
         and eax, 3800h
-        add esi, eax
+        add rsi, rax
 
-        mov eax, DWORD [ScanLine]
+        mov eax, [ScanLine]
         shl eax, 10
-        mov edi, [esp+24]           ; Param buffer (after one call instruction)
-        add edi, eax
+        mov rdi, r10
+        add rdi, rax
 
         mov DWORD [scrollx], 0
 
@@ -171,47 +163,47 @@ RL01:   movzx ebx, BYTE [VDPR+9]
         shl ebx, 2
 
         mov ch, 32
-RL_0:   movzx edx, WORD [esi]
-        add esi, 2
+RL_0:   movzx edx, WORD [rsi]
+        add rsi, 2
 
         ; Sprite palette?
-        mov DWORD [pal], edx
+        mov [pal], edx
         and DWORD [pal], 0800h
         shr DWORD [pal], 7
 
-RL_00:  test BYTE [esi-1], 10h      ; Tile in front layer (renders after)
+RL_00:  test BYTE [rsi-1], 10h      ; Tile in front layer (renders after)
         jz RL11
         mov BYTE [RenderBL2], 1
-        mov eax, DWORD [pal]
-        mov al, BYTE [CRAM+eax]
+        mov eax, [pal]
+        mov al, [CRAM+eax]
         and al, 3Fh
         mov eax, [palette+eax*4]
-        mov edx, DWORD [scrollx]
-        mov [edi+edx], eax
+        mov edx, [scrollx]
+        mov [rdi+rdx], eax
         add edx, 4
         and edx, 3FFh
-        mov [edi+edx], eax
+        mov [rdi+rdx], eax
         add edx, 4
         and edx, 3FFh
-        mov [edi+edx], eax
+        mov [rdi+rdx], eax
         add edx, 4
         and edx, 3FFh
-        mov [edi+edx], eax
+        mov [rdi+rdx], eax
         add edx, 4
         and edx, 3FFh
-        mov [edi+edx], eax
+        mov [rdi+rdx], eax
         add edx, 4
         and edx, 3FFh
-        mov [edi+edx], eax
+        mov [rdi+rdx], eax
         add edx, 4
         and edx, 3FFh
-        mov [edi+edx], eax
+        mov [rdi+rdx], eax
         add edx, 4
         and edx, 3FFh
-        mov [edi+edx], eax
+        mov [rdi+rdx], eax
         add edx, 4
         and edx, 3FFh
-        mov DWORD [scrollx], edx
+        mov [scrollx], edx
         dec ch
         jnz RL_0
         ret
@@ -219,18 +211,18 @@ RL_00:  test BYTE [esi-1], 10h      ; Tile in front layer (renders after)
 RL11:   and edx, 1FFh
         shl edx, 5
         mov eax, ebx
-        test BYTE [esi-1], 4h       ; Flip Vertical
+        test BYTE [rsi-1], 4h       ; Flip Vertical
         jz RL12
         mov eax, 28
         sub eax, ebx
 
-RL12:   mov ebp, DWORD [VRAM+edx+eax]
-        test BYTE [esi-1], 2h       ; Flip Horizontal
+RL12:   mov r9d, [VRAM+edx+eax]
+        test BYTE [rsi-1], 2h       ; Flip Horizontal
         jnz RL22
 
         mov cl, 8
-RL1:    mov eax, ebp
-        shl ebp, 1
+RL1:    mov eax, r9d
+        shl r9d, 1
         and eax, 80808080h
         shr eax, 7
         mov edx, eax
@@ -241,15 +233,15 @@ RL1:    mov eax, ebp
         shr edx, 7
         or eax, edx
         and eax, 0Fh
-        mov edx, DWORD [pal]
-        mov al, BYTE [CRAM+eax+edx]
+        mov edx, [pal]
+        mov al, [CRAM+eax+edx]
         and al, 3Fh
         mov eax, [palette+eax*4]
-        mov edx, DWORD [scrollx]
-        mov [edi+edx], eax
+        mov edx, [scrollx]
+        mov [rdi+rdx], eax
         add edx, 4
         and edx, 3FFh
-        mov DWORD [scrollx], edx
+        mov [scrollx], edx
         dec cl
         jnz RL1
         dec ch
@@ -257,8 +249,8 @@ RL1:    mov eax, ebp
         ret
 
 RL22:   mov cl, 8
-RL3:    mov eax, ebp
-        shr ebp, 1
+RL3:    mov eax, r9d
+        shr r9d, 1
         and eax, 01010101h
         mov edx, eax
         shr edx, 7
@@ -268,15 +260,15 @@ RL3:    mov eax, ebp
         shr edx, 7
         or eax, edx
         and eax, 0Fh
-        mov edx, DWORD [pal]
-        mov al, BYTE [CRAM+eax+edx]
+        mov edx, [pal]
+        mov al, [CRAM+eax+edx]
         and al, 3Fh
         mov eax, [palette+eax*4]
-        mov edx, DWORD [scrollx]
-        mov [edi+edx], eax
+        mov edx, [scrollx]
+        mov [rdi+rdx], eax
         add edx, 4
         and edx, 3FFh
-        mov DWORD [scrollx], edx
+        mov [scrollx], edx
         dec cl
         jnz RL3
         dec ch
@@ -287,24 +279,24 @@ RL3:    mov eax, ebp
 ; **********************************
 render_background_layer2:
         movzx eax, BYTE [VDPR+9]
-        add eax, DWORD [ScanLine]
+        add eax, [ScanLine]
         cmp eax, 224
         jb RBL000
         sub eax, 224
 
 RBL000: shr eax, 3
         shl eax, 6
-        mov esi, VRAM
-        add esi, eax
+        mov rsi, VRAM
+        add rsi, rax
         movzx eax, BYTE [VDPR+2]
         shl eax, 10
         and eax, 3800h
-        add esi, eax
+        add rsi, rax
 
-        mov eax, DWORD [ScanLine]
+        mov eax, [ScanLine]
         shl eax, 10
-        mov edi, [esp+24]               ; Param buffer (after one call instruction)
-        add edi, eax
+        mov rdi, r10
+        add rdi, rax
 
         mov DWORD [scrollx], 0
 
@@ -316,18 +308,18 @@ RBL000: shr eax, 3
 
 RBL00:  movzx eax, BYTE [VDPR+8]
         shl eax, 2
-        mov DWORD [scrollx], eax
+        mov [scrollx], eax
 
 RBL01:  movzx ebx, BYTE [VDPR+9]
-        add ebx, DWORD [ScanLine]
+        add ebx, [ScanLine]
         and ebx, 7
         shl ebx, 2
 
         mov ch, 32
-RBL_0:  movzx edx, WORD [esi]
-        add esi, 2
+RBL_0:  movzx edx, WORD [rsi]
+        add rsi, 2
 
-        test BYTE [esi-1], 10h          ; Tile in front layer (renders now)
+        test BYTE [rsi-1], 10h          ; Tile in front layer (renders now)
         jnz RBL_00
         add DWORD [scrollx], 8*4
         and DWORD [scrollx], 3FFh
@@ -338,21 +330,21 @@ RBL_0:  movzx edx, WORD [esi]
 RBL_00: and edx, 1FFh
         shl edx, 5
         mov eax, ebx
-        test BYTE [esi-1], 4h           ; Flip Vertical
+        test BYTE [rsi-1], 4h           ; Flip Vertical
         jz RBL11
         mov eax, 28
         sub eax, ebx
 RBL11:  mov DWORD [pal], 0
-        test BYTE [esi-1], 8h           ; Sprite palette
+        test BYTE [rsi-1], 8h           ; Sprite palette
         jz RBL12
         mov DWORD [pal], 16
-RBL12:  mov ebp, DWORD [VRAM+edx+eax]
-        test BYTE [esi-1], 2h           ; Flip Horizontal
+RBL12:  mov r9d, [VRAM+edx+eax]
+        test BYTE [rsi-1], 2h           ; Flip Horizontal
         jnz RBL22
 
         mov cl, 8
-RBL1:   mov eax, ebp
-        shl ebp, 1
+RBL1:   mov eax, r9d
+        shl r9d, 1
         and eax, 80808080h
         shr eax, 7
         mov edx, eax
@@ -364,17 +356,17 @@ RBL1:   mov eax, ebp
         or eax, edx
         and eax, 0Fh
         jnz RBL13
-        mov edx, DWORD [scrollx]
+        mov edx, [scrollx]
         jmp RBL14
-RBL13:  mov edx, DWORD [pal]
-        mov al, BYTE [CRAM+eax+edx]
+RBL13:  mov edx, [pal]
+        mov al, [CRAM+eax+edx]
         and al, 3Fh
         mov eax, [palette+eax*4]
-        mov edx, DWORD [scrollx]
-        mov [edi+edx], eax
+        mov edx, [scrollx]
+        mov [rdi+rdx], eax
 RBL14:  add edx, 4
         and edx, 3FFh
-        mov DWORD [scrollx], edx
+        mov [scrollx], edx
         dec cl
         jnz RBL1
         dec ch
@@ -382,8 +374,8 @@ RBL14:  add edx, 4
         ret
 
 RBL22:  mov cl, 8
-RBL3:   mov eax, ebp
-        shr ebp, 1
+RBL3:   mov eax, r9d
+        shr r9d, 1
         and eax, 01010101h
         mov edx, eax
         shr edx, 7
@@ -394,17 +386,17 @@ RBL3:   mov eax, ebp
         or eax, edx
         and eax, 0Fh
         jnz RBL4
-        mov edx, DWORD [scrollx]
+        mov edx, [scrollx]
         jmp RBL5
-RBL4:   mov edx, DWORD [pal]
-        mov al, BYTE [CRAM+eax+edx]
+RBL4:   mov edx, [pal]
+        mov al, [CRAM+eax+edx]
         and al, 3Fh
         mov eax, [palette+eax*4]
-        mov edx, DWORD [scrollx]
-        mov [edi+edx], eax
+        mov edx, [scrollx]
+        mov [rdi+rdx], eax
 RBL5:   add edx, 4
         and edx, 3FFh
-        mov DWORD [scrollx], edx
+        mov [scrollx], edx
         dec cl
         jnz RBL3
         dec ch
@@ -415,8 +407,8 @@ RBL5:   add edx, 4
 ; **************************
 render_sprite_layer:
         xor ecx, ecx
-        mov esi, VRAM + 3F00h
-RSLX0:  cmp BYTE [esi+ecx], 0D0h
+        mov rsi, VRAM + 3F00h
+RSLX0:  cmp BYTE [rsi+rcx], 0D0h
         je RSLX1
         inc cl
         cmp cl, 64
@@ -436,40 +428,40 @@ RSL00:  mov DWORD [sb], 0
         jz RSL01
         mov DWORD [sb], 2000h
 
-RSL01:  mov eax, DWORD [ScanLine]
+RSL01:  mov eax, [ScanLine]
         shl eax, 10
-        mov edi, [esp+24]               ; Param buffer (after one call instruction)
-        add edi, eax
-        mov DWORD [vb], edi
+        mov rdi, r10
+        add rdi, rax
+        mov [vb], rdi
 
-        mov eax, DWORD [ScanLine]
+        mov eax, [ScanLine]
         dec eax
-        mov BYTE [sl], al
+        mov [sl], al
 
-RSL0:   mov al, BYTE [sl]
-        mov ah, [esi+ecx]
+RSL0:   mov al, [sl]
+        mov ah, [rsi+rcx]
         sub al, ah
-        cmp al, BYTE [s8x]
+        cmp al, [s8x]
         jae RSL1
 
         movzx ebx, al
         shl ebx, 2
 
-        movzx edi, BYTE [esi+ecx*2+128]
+        movzx edi, BYTE [rsi+rcx*2+128]
         test BYTE [VDPR+0], 8
         jz RSL02
         sub edi, 8
         and edi, 0FFh
 RSL02:  shl edi, 2
-        add edi, DWORD [vb]
-        movzx eax, BYTE [esi+ecx*2+129]
+        add rdi, [vb]
+        movzx eax, BYTE [rsi+rcx*2+129]
         shl eax, 5
-        add eax, DWORD [sb]
-        mov ebp, DWORD [VRAM+eax+ebx]
+        add eax, [sb]
+        mov r9d, [VRAM+eax+ebx]
 
         mov bl, 8
-RSL3:   mov eax, ebp
-        shl ebp, 1
+RSL3:   mov eax, r9d
+        shl r9d, 1
         and eax, 80808080h
         shr eax, 7
         mov edx, eax
@@ -481,11 +473,11 @@ RSL3:   mov eax, ebp
         or eax, edx
         and eax, 0Fh
         jz RSL4
-        mov al, BYTE [CRAM+eax+16]
+        mov al, [CRAM+eax+16]
         and al, 3Fh
         mov eax, [palette+eax*4]
-        mov [edi], eax
-RSL4:   add edi, 4
+        mov [rdi], eax
+RSL4:   add rdi, 4
         dec bl
         jnz RSL3
 
@@ -511,7 +503,7 @@ SECTION .bss
 
 scrollx     RESD 1
 pal         RESD 1
-vb          RESD 1
+vb          RESQ 1
 sl          RESB 1
 sb          RESD 1
 s8x         RESB 1

@@ -1,5 +1,5 @@
 ; Alis, A SEGA Master System emulator
-; Copyright (C) 2002-2014 Cidorvan Leite
+; Copyright (C) 2002-2020 Cidorvan Leite
 
 ; This program is free software: you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -24,29 +24,25 @@ SECTION .text
 ; *****************************
 GLOBAL init_banks
 init_banks:
-        push edi
+        mov [ROM_size], dil     ; First Parameter (ROM_size rdi)
 
         ; Clear RAM
-        xor eax, eax
-        mov BYTE [battery], al
-        mov ecx, (40*1024)/4
-        mov edi, RAM
-        rep stosd
+        xor rax, rax
+        mov ecx, (40 * 1024) / 8
+        mov rdi, RAM
+        rep stosq
 
         ; Initialize banks pointers and page registers
-        mov BYTE [RAMSelect], al
-        mov eax, DWORD [ROM]
-        mov DWORD [pBank0], eax
-        mov DWORD [pBank1], eax
-        mov DWORD [pBank2], eax
-        mov DWORD [pBank2ROM], eax
+        mov [battery], al
+        mov [RAMSelect], al
+        mov rax, [ROM]
+        mov [pBank0], rax
+        mov [pBank1], rax
+        mov [pBank2], rax       ; ??? Right pointer ???
+        mov [pBank2ROM], rax
         mov BYTE [RAM+1FFEh], 1
         mov BYTE [RAM+1FFFh], 2
 
-        mov eax, [esp+8]        ; First Parameter (ROM_size)
-        mov [ROM_size], al
-
-        pop edi
         ret
 
 ; * Read memory
@@ -65,17 +61,17 @@ read_mem:
 
         ; Read RAM or page register
         and esi, 0DFFFh
-        add esi, RAM - 0C000h
+        add rsi, RAM - 0C000h
         ret
 
         ; Select the right bank
-RM0:    add esi, DWORD [ROM]
+RM0:    add rsi, [ROM]
         ret
-RM1:    add esi, DWORD [pBank0]
+RM1:    add rsi, [pBank0]
         ret
-RM2:    add esi, DWORD [pBank1]
+RM2:    add rsi, [pBank1]
         ret
-RM3:    add esi, DWORD [pBank2]
+RM3:    add rsi, [pBank2]
         ret
 
 ; * Write memory
@@ -88,39 +84,36 @@ write_mem:
         cmp esi, 0C000h
         jb WM8
 
+        ; ??? F000 - FFFB ???
+
         ; Write in page registers?
         cmp esi, 0FFFCh
         jae WM1
 
         ; Write in RAM
 WM0:    and esi, 0DFFFh
-        add esi, RAM - 0C000h
+        add rsi, RAM - 0C000h
         ret
 
         ; Select
 WM1:    cmp esi, 0FFFCh
         jne WM4
-        mov BYTE [RAMSelect], al
+        mov [RAMSelect], al
         test al, 8
         jnz WM11
-        mov ebx, DWORD [pBank2ROM]
-        mov DWORD [pBank2], ebx
+        mov rbx, [pBank2ROM]
+        mov [pBank2], rbx
         jmp WM0
 
         ; Initialize battery
-WM11:   cmp BYTE [battery], 0
-        jne WM2
-        push eax
-        call init_battery
-        pop eax
-        mov BYTE [battery], 1
+WM11:   mov BYTE [battery], 1
 
         ; Select battery bank
 WM2:    test al, 4
         jnz WM3
-        mov DWORD [pBank2], RAM_EX - 08000h
+        mov QWORD [pBank2], RAM_EX - 08000h
         jmp WM0
-WM3:    mov DWORD [pBank2], RAM_EX - 04000h
+WM3:    mov QWORD [pBank2], RAM_EX - 04000h
         jmp WM0
 
         ; Select ROM page
@@ -129,38 +122,38 @@ WM4:    mov ebx, eax
         div BYTE [ROM_size]
         movzx eax, ah
         shl eax, 14
-        add eax, DWORD [ROM]
+        add rax, [ROM]
 
         ; Bank 0
         cmp esi, 0FFFDh
         jne WM5
-        mov DWORD [pBank0], eax
+        mov [pBank0], rax
         mov eax, ebx
         jmp WM0
 
         ; Bank 1
 WM5:    cmp esi, 0FFFEh
         jne WM6
-        sub eax, 04000h
-        mov DWORD [pBank1], eax
+        sub rax, 04000h
+        mov [pBank1], rax
         mov eax, ebx
         jmp WM0
 
         ; Bank 2
-WM6:    sub eax, 08000h
-        mov DWORD [pBank2ROM], eax
+WM6:    sub rax, 08000h
+        mov [pBank2ROM], rax
         test BYTE [RAMSelect], 8
         jnz WM66
-        mov DWORD [pBank2], eax
+        mov [pBank2], rax   ; cmov???
 WM66:   mov eax, ebx
         jmp WM0
 
         ; Write in selected bank
-WM7:    mov esi, garbage
+WM7:    mov rsi, garbage
         ret
 WM8:    test BYTE [RAMSelect], 8
         jz WM7
-        add esi, DWORD [pBank2]
+        add rsi, [pBank2]
         ret
 
 
@@ -169,4 +162,4 @@ SECTION .bss
 GLOBAL garbage, ROM_size, ROM
 garbage     RESW 1
 ROM_size    RESB 1
-ROM         RESD 1
+ROM         RESQ 1

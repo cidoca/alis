@@ -1,5 +1,5 @@
 ; Alis, A SEGA Master System emulator
-; Copyright (C) 2002-2014 Cidorvan Leite
+; Copyright (C) 2002-2020 Cidorvan Leite
 
 ; This program is free software: you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -30,17 +30,17 @@ SECTION .text
 GLOBAL reset_CPU
 reset_CPU:
         xor eax, eax
-        mov DWORD [Flag], eax
-        mov DWORD [rE], eax
-        mov DWORD [Flag2], eax
-        mov DWORD [rE2], eax
-        mov WORD [rR], ax
-        mov DWORD [rIX], eax
-        mov DWORD [rIY], eax
-        mov DWORD [rPCx], eax
+        mov [Flag], eax
+        mov [rE], eax
+        mov [Flag2], eax
+        mov [rE2], eax
+        mov [rR], ax
+        mov [rIX], eax
+        mov [rIY], eax
+        mov [rPCx], eax
         mov DWORD [rSPx], 0D000h
 
-        mov DWORD [TClock], eax
+        mov [TClock], eax
         mov BYTE [Halt], 0
         mov BYTE [NMI], 0
 
@@ -51,10 +51,10 @@ reset_CPU:
 GLOBAL TraceLine
 TraceLine:
         inc BYTE [rR]
-        mov esi, DWORD [rPCx]
+        mov esi, [rPCx]
         call read_mem
-        movzx edx, BYTE [esi]
-        jmp [Opcode+edx*4]
+        movzx edx, BYTE [rsi]
+        jmp QWORD [Opcode+edx*8]
 
 TLF:    cmp BYTE [TClock], 228
         jb TraceLine
@@ -64,12 +64,10 @@ TLF:    cmp BYTE [TClock], 228
 ; ***********************************
 GLOBAL int_NMI
 int_NMI:
-        pusha
-
         ; Save interruption mask
         mov BYTE [NMI], 1
-        mov al, BYTE [IFF1]
-        mov BYTE [IFF2], al
+        mov al, [IFF1]
+        mov [IFF2], al
         mov BYTE [IFF1], 0
 
         ; Checks CPU state
@@ -83,14 +81,13 @@ NMI0:   sub DWORD [rSPx], 2
         mov esi, DWORD [rSPx]
         call read_mem
         mov eax, DWORD [rPCx]
-        mov [esi], ax
+        mov [rsi], ax
 
         ; Jump to interruption address
         inc BYTE [rR]
         mov DWORD [rPCx], 66h
         add BYTE [TClock], 11
 
-        popa
         ret
 
 ; * Z80 Interruption
@@ -116,7 +113,7 @@ Z80:    sub DWORD [rSPx], 2
         mov esi, DWORD [rSPx]
         call read_mem
         mov eax, DWORD [rPCx]
-        mov [esi], ax
+        mov [rsi], ax
 
         ; Jump to interruption address
         inc BYTE [rR]
@@ -142,7 +139,7 @@ GLOBAL _NIMP2
 _NIMP2:
         ;pusha
         ;push edx
-        ;movzx eax, BYTE [esi]
+        ;movzx eax, BYTE [rsi]
         ;push eax
         ;push DWORD [rPCx]
         ;call ?OpCodeErr2@@YAXHHH@Z
@@ -156,9 +153,9 @@ GLOBAL _NIMP3
 _NIMP3:
         ;pusha
         ;push edx
-        ;movzx eax, BYTE [esi+1]
+        ;movzx eax, BYTE [rsi+1]
         ;push eax
-        ;movzx eax, BYTE [esi]
+        ;movzx eax, BYTE [rsi]
         ;push eax
         ;push DWORD [rPCx]
         ;call ?OpCodeErr3@@YAXHHHH@Z
@@ -183,7 +180,7 @@ _NOLIST:
 ; * Load register pair rr with imm
 ; **********************************
 %MACRO __LDrrn 2
-        movzx eax, WORD [esi+1]
+        movzx eax, WORD [rsi+1]
         mov %1, %2
         add DWORD [rPCx], 3
         add BYTE [TClock], 10
@@ -193,7 +190,7 @@ _NOLIST:
 ; * Load register r with value n
 ; ********************************
 %MACRO __LDrn 1
-        mov al, [esi+1]
+        mov al, [rsi+1]
         mov %1, al
         add DWORD [rPCx], 2
         add BYTE [TClock], 7
@@ -279,7 +276,7 @@ _NOLIST:
 %MACRO __LDr_HL 1
         movzx esi, WORD [rL]
         call read_mem
-        __LDrr %1, [esi], 7
+        __LDrr %1, [rsi], 7
 %ENDMACRO
 
 ; * Load location (HL) with register r
@@ -288,7 +285,7 @@ _NOLIST:
         mov al, %1
         movzx esi, WORD [rL]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         inc DWORD [rPCx]
         add BYTE [TClock], 7
         jmp TLF
@@ -424,7 +421,7 @@ _NOLIST:
         mov esi, DWORD [rSPx]
         add DWORD [rSPx], 2
         call read_mem
-        mov ax, [esi]
+        mov ax, [rsi]
         mov WORD %1, ax
         inc DWORD [rPCx]
         add BYTE [TClock], 10
@@ -436,7 +433,7 @@ _NOLIST:
 %MACRO __JPccnn 2
         test BYTE [Flag], %2
         j%1 %%A
-        movzx eax, WORD [esi+1]
+        movzx eax, WORD [rsi+1]
         mov DWORD [rPCx], eax
         jmp %%B
 %%A:    add DWORD [rPCx], 3
@@ -449,7 +446,7 @@ _NOLIST:
 %MACRO __JRccn 2
         test BYTE [Flag], %2
         j%1 %%A
-        movsx eax, BYTE [esi+1]
+        movsx eax, BYTE [rsi+1]
         add DWORD [rPCx], eax
         add BYTE [TClock], 12
         jmp %%B
@@ -465,12 +462,12 @@ _NOLIST:
         j%1 %%A
         mov eax, DWORD [rPCx]
         add eax, 3
-        movzx edx, WORD [esi+1]
+        movzx edx, WORD [rsi+1]
         mov DWORD [rPCx], edx
         sub DWORD [rSPx], 2
         mov esi, DWORD [rSPx]
         call write_mem
-        mov [esi], ax
+        mov [rsi], ax
         add BYTE [TClock], 17
         jmp TLF
 %%A:    add DWORD [rPCx], 3
@@ -486,7 +483,7 @@ _NOLIST:
         mov esi, DWORD [rSPx]
         add DWORD [rSPx], 2
         call read_mem
-        movzx eax, WORD [esi]
+        movzx eax, WORD [rsi]
         mov DWORD [rPCx], eax
         add BYTE [TClock], 11
         jmp TLF
@@ -502,7 +499,7 @@ _NOLIST:
         sub DWORD [rSPx], 2
         mov esi, DWORD [rSPx]
         call write_mem
-        mov [esi], ax
+        mov [rsi], ax
         inc DWORD [rPCx]
         add BYTE [TClock], 11
         jmp TLF
@@ -516,7 +513,7 @@ _NOLIST:
         sub DWORD [rSPx], 2
         mov esi, DWORD [rSPx]
         call write_mem
-        mov [esi], ax
+        mov [rsi], ax
         mov DWORD [rPCx], %1
         add BYTE [TClock], 11
         jmp TLF
@@ -527,9 +524,9 @@ _NOLIST:
 %MACRO __EX_SP_r 2
         mov esi, DWORD [rSPx]
         call read_mem
-        mov ax, [esi]
+        mov ax, [rsi]
         mov bx, WORD %1
-        mov [esi], bx
+        mov [rsi], bx
         mov WORD %1, ax
         inc DWORD [rPCx]
         add BYTE [TClock], %2
@@ -564,7 +561,7 @@ _LD_BC_A:
         mov al, BYTE [rAcc]
         movzx esi, WORD [rC]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         inc DWORD [rPCx]
         add BYTE [TClock], 7
         jmp TLF
@@ -591,7 +588,7 @@ _INC_HL:
         movzx esi, WORD [rL]
         mov edi, esi
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         inc al
         lahf
         jno INCHL
@@ -600,7 +597,7 @@ INCHL:  and ah, 11010000b
         or BYTE [Flag], ah
         mov esi, edi
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         inc DWORD [rPCx]
         add BYTE [TClock], 11
         jmp TLF
@@ -621,7 +618,7 @@ _DEC_HL:
         movzx esi, WORD [rL]
         mov edi, esi
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         dec al
         lahf
         jno DECHL
@@ -630,7 +627,7 @@ DECHL:  and ah, 11010000b
         or BYTE [Flag], ah
         mov esi, edi
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         inc DWORD [rPCx]
         add BYTE [TClock], 11
         jmp TLF
@@ -682,7 +679,7 @@ GLOBAL _LDA_BC
 _LDA_BC:
         movzx esi, WORD [rC]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         mov BYTE [rAcc], al
         inc DWORD [rPCx]
         add BYTE [TClock], 7
@@ -714,7 +711,7 @@ GLOBAL _DJNZ
 _DJNZ:
         dec BYTE [rB]
         jz DJNZ0
-        movsx eax, BYTE [esi+1]
+        movsx eax, BYTE [rsi+1]
         add DWORD [rPCx], eax
         add BYTE [TClock], 13
         jmp DJNZ1
@@ -729,7 +726,7 @@ _LD_DE_A:
         mov al, BYTE [rAcc]
         movzx esi, WORD [rE]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         inc DWORD [rPCx]
         add BYTE [TClock], 7
         jmp TLF
@@ -752,7 +749,7 @@ RLA0:   inc DWORD [rPCx]
 ; **************************************************************
 GLOBAL _JRE
 _JRE:
-        movsx eax, BYTE [esi+1]
+        movsx eax, BYTE [rsi+1]
         add DWORD [rPCx], eax
         add DWORD [rPCx], 2
         add BYTE [TClock], 12
@@ -764,7 +761,7 @@ GLOBAL _LDA_DE
 _LDA_DE:
         movzx esi, WORD [rE]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         mov BYTE [rAcc], al
         inc DWORD [rPCx]
         add BYTE [TClock], 7
@@ -796,22 +793,22 @@ _JRCE:  __JRccn z, 1h
 ; *************************************************************
 GLOBAL _LD_N_HL
 _LD_N_HL:
-        movzx esi, WORD [esi+1]
+        movzx esi, WORD [rsi+1]
         cmp esi, 0FFFCh
         jae LDNHL0
         mov ax, WORD [rL]
         call write_mem
-        mov [esi], ax
+        mov [rsi], ax
         jmp LDNHL1
 LDNHL0: mov edi, esi
         mov al, BYTE [rL]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         mov esi, edi
         inc esi
         mov al, BYTE [rH]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
 LDNHL1: add DWORD [rPCx], 3
         add BYTE [TClock], 20
         jmp TLF
@@ -826,10 +823,10 @@ _DAA:
         test ah, 2
         jnz DAA0
         sahf
-        daa
+        ;daa
         jmp DAA1
 DAA0:   sahf
-        das
+        ;das
 DAA1:   lahf
         and ah, 11010101b
         or BYTE [Flag], ah
@@ -842,9 +839,9 @@ DAA1:   lahf
 ; **************************************************************
 GLOBAL _LDHL_N2
 _LDHL_N2:
-        movzx esi, WORD [esi+1]
+        movzx esi, WORD [rsi+1]
         call read_mem
-        mov ax, [esi]
+        mov ax, [rsi]
         mov WORD [rL], ax
         add DWORD [rPCx], 3
         add BYTE [TClock], 16
@@ -865,9 +862,9 @@ __CPL:
 GLOBAL _LD_N_A
 _LD_N_A:
         mov al, BYTE [rAcc]
-        movzx esi, WORD [esi+1]
+        movzx esi, WORD [rsi+1]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         add DWORD [rPCx], 3
         add BYTE [TClock], 13
         jmp TLF
@@ -876,10 +873,10 @@ _LD_N_A:
 ; ************************************************************
 GLOBAL _LD_HL_N
 _LD_HL_N:
-        mov al, [esi+1]
+        mov al, [rsi+1]
         movzx esi, WORD [rL]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         add DWORD [rPCx], 2
         add BYTE [TClock], 10
         jmp TLF
@@ -898,9 +895,9 @@ _SCF:
 ; *******************************************************************
 GLOBAL _LDA_N
 _LDA_N:
-        movzx esi, WORD [esi+1]
+        movzx esi, WORD [rsi+1]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         mov BYTE [rAcc], al
         add DWORD [rPCx], 3
         add BYTE [TClock], 13
@@ -1034,10 +1031,10 @@ _ADDAH: __ADDAs BYTE [rH], 4
 _ADDAL: __ADDAs BYTE [rL], 4
 _ADDA_HL:movzx esi, WORD [rL]
         call read_mem
-        __ADDAs [esi], 7
+        __ADDAs [rsi], 7
 _ADDAA: __ADDAs BYTE [rAcc], 4
 _ADDAN: inc DWORD [rPCx]
-        __ADDAs [esi+1], 7
+        __ADDAs [rsi+1], 7
 
 ; * ADC A, s - (88-8F,CE) - 4/7 Clk - Add operand s to accumulator with carry
 ; *****************************************************************************
@@ -1050,10 +1047,10 @@ _ADCAH: __ADCAs BYTE [rH], 4
 _ADCAL: __ADCAs BYTE [rL], 4
 _ADCA_HL:movzx esi, WORD [rL]
         call read_mem
-        __ADCAs [esi], 7
+        __ADCAs [rsi], 7
 _ADCAA: __ADCAs BYTE [rAcc], 4
 _ADCAN: inc DWORD [rPCx]
-        __ADCAs [esi+1], 7
+        __ADCAs [rsi+1], 7
 
 ; * SUB s - (90-97,D6) - 4/7 Clk - Subtract operand s from accumulator
 ; **********************************************************************
@@ -1066,10 +1063,10 @@ _SUBH:  __SUBs BYTE [rH], 4
 _SUBL:  __SUBs BYTE [rL], 4
 _SUB_HL:movzx esi, WORD [rL]
         call read_mem
-        __SUBs [esi], 7
+        __SUBs [rsi], 7
 _SUBA:  __SUBs BYTE [rAcc], 4
 _SUBN:  inc DWORD [rPCx]
-        __SUBs [esi+1], 7
+        __SUBs [rsi+1], 7
 
 ; * SBC A,s - (98-9F,DE) - 4/7 Clk - Subtract operand s from accumulator with carry
 ; ***********************************************************************************
@@ -1082,10 +1079,10 @@ _SBCAH: __SBCAs BYTE [rH], 4
 _SBCAL: __SBCAs BYTE [rL], 4
 _SBCA_HL:movzx esi, WORD [rL]
         call read_mem
-        __SBCAs [esi], 7
+        __SBCAs [rsi], 7
 _SBCAA: __SBCAs BYTE [rAcc], 4
 _SBCAN: inc DWORD [rPCx]
-        __SBCAs [esi+1], 7
+        __SBCAs [rsi+1], 7
 
 ; * AND s - (A0-A7,E6) - 4/7 Clk - Logical AND of operand s to accumulator
 ; **************************************************************************
@@ -1098,10 +1095,10 @@ _ANDH:  __ANDs BYTE [rH], 4
 _ANDL:  __ANDs BYTE [rL], 4
 _AND_HL:movzx esi, WORD [rL]
         call read_mem
-        __ANDs [esi], 7
+        __ANDs [rsi], 7
 _ANDA:  __ANDs BYTE [rAcc], 4
 _ANDN:  inc DWORD [rPCx]
-        __ANDs [esi+1], 7
+        __ANDs [rsi+1], 7
 
 ; * XOR s - (A8-AF,EE) - 4/7 Clk - Exclusive OR operand s and accumulator
 ; *************************************************************************
@@ -1114,10 +1111,10 @@ _XORH:  __XORs BYTE [rH], 4
 _XORL:  __XORs BYTE [rL], 4
 _XOR_HL:movzx esi, WORD [rL]
         call read_mem
-        __XORs [esi], 7
+        __XORs [rsi], 7
 _XORA:  __XORs BYTE [rAcc], 4
 _XORN:  inc DWORD [rPCx]
-        __XORs [esi+1], 7
+        __XORs [rsi+1], 7
 
 ; * OR s - (B0-B7,F6) - 4/7 Clk - Logical OR of operand s and accumulator
 ; *************************************************************************
@@ -1130,10 +1127,10 @@ _ORH:   __ORs BYTE [rH], 4
 _ORL:   __ORs BYTE [rL], 4
 _OR_HL: movzx esi, WORD [rL]
         call read_mem
-        __ORs [esi], 7
+        __ORs [rsi], 7
 _ORA:   __ORs BYTE [rAcc], 4
 _ORN:   inc DWORD [rPCx]
-        __ORs [esi+1], 7
+        __ORs [rsi+1], 7
 
 ; * CP s - (B8-BF,FE) - 4/7 Clk - Compare operand s with accumulator
 ; ********************************************************************
@@ -1146,10 +1143,10 @@ _CPH:   __CPs BYTE [rH], 4
 _CPL:   __CPs BYTE [rL], 4
 _CP_HL: movzx esi, WORD [rL]
         call read_mem
-        __CPs [esi], 7
+        __CPs [rsi], 7
 _CPA:   __CPs BYTE [rAcc], 4
 _CPN:   inc DWORD [rPCx]
-        __CPs [esi+1], 7
+        __CPs [rsi+1], 7
 
 ; * RET cc - (C0,C8,D0,D8,E0,E8,F0,F8) - 5/11 Clk - Return from subroutine if condition cc is true
 ; **************************************************************************************************
@@ -1187,7 +1184,7 @@ _JPMN:  __JPccnn z, 80h
 ; *********************************
 GLOBAL _JPN
 _JPN:
-        movzx eax, WORD [esi+1]
+        movzx eax, WORD [rsi+1]
         mov DWORD [rPCx], eax
         add BYTE [TClock], 10
         jmp TLF
@@ -1231,7 +1228,7 @@ _RET:
         mov esi, DWORD [rSPx]
         add DWORD [rSPx], 2
         call read_mem
-        movzx eax, WORD [esi]
+        movzx eax, WORD [rsi]
         mov DWORD [rPCx], eax
         add BYTE [TClock], 10
         jmp TLF
@@ -1241,20 +1238,20 @@ _RET:
 GLOBAL _CB
 _CB:
         inc BYTE [rR]
-        movzx edx, BYTE [esi+1]
-        jmp [OpcodeCB+edx*4]
+        movzx edx, BYTE [rsi+1]
+        jmp QWORD [OpcodeCB+edx*8]
 
 ; * CALL n - CD n n - 17 Clk - Call subroutine
 ; **********************************************
 GLOBAL _CALLN
 _CALLN:
-        movzx edx, WORD [esi+1]
+        movzx edx, WORD [rsi+1]
         mov eax, DWORD [rPCx]
         add eax, 3
         sub DWORD [rSPx], 2
         mov esi, DWORD [rSPx]
         call write_mem
-        mov [esi], ax
+        mov [rsi], ax
         mov DWORD [rPCx], edx
         add BYTE [TClock], 17
         jmp TLF
@@ -1264,8 +1261,8 @@ _CALLN:
 GLOBAL _OUTNA
 _OUTNA:
         mov al, BYTE [rAcc]
-        movzx edx, BYTE [esi+1]
-        call [write_io+edx*4]
+        movzx edx, BYTE [rsi+1]
+        call QWORD [write_io+edx*8]
         add DWORD [rPCx], 2
         add BYTE [TClock], 11
         jmp TLF
@@ -1286,15 +1283,15 @@ _EXX:
 GLOBAL _DD
 _DD:
         inc BYTE [rR]
-        movzx edx, BYTE [esi+1]
-        jmp [OpcodeDD+edx*4]
+        movzx edx, BYTE [rsi+1]
+        jmp QWORD [OpcodeDD+edx*8]
 
 ; * IN A, (n) - DB n - 11 Clk - Load the accumulator with input from device n
 ; *****************************************************************************
 GLOBAL _INA_N
 _INA_N:
-        movzx edx, BYTE [esi+1]
-        call [read_io+edx*4]
+        movzx edx, BYTE [rsi+1]
+        call QWORD [read_io+edx*8]
         mov BYTE [rAcc], al
         add DWORD [rPCx], 2
         add BYTE [TClock], 11
@@ -1332,8 +1329,8 @@ _EXDEHL:
 GLOBAL _ED
 _ED:
         inc BYTE [rR]
-        movzx edx, BYTE [esi+1]
-        jmp [OpcodeED+edx*4]
+        movzx edx, BYTE [rsi+1]
+        jmp QWORD [OpcodeED+edx*8]
 
 ; * DI - F3 - 4 Clk - Disable interrupts
 ; ****************************************
@@ -1369,8 +1366,8 @@ _EI:
 GLOBAL _FD
 _FD:
         inc BYTE [rR]
-        movzx edx, BYTE [esi+1]
-        jmp [OpcodeFD+edx*4]
+        movzx edx, BYTE [rsi+1]
+        jmp QWORD [OpcodeFD+edx*8]
 
 
 ; ***************************************************************************************
@@ -1444,7 +1441,7 @@ _FD:
 %MACRO __OUT_C_r 1
         mov al, %1
         movzx edx, BYTE [rC]
-        call [write_io+edx*4]
+        call QWORD [write_io+edx*8]
         add DWORD [rPCx], 2
         add BYTE [TClock], 12
         jmp TLF
@@ -1453,11 +1450,11 @@ _FD:
 ; * Load register %1 with location (I$+d)
 ; ****************************************
 %MACRO __LDrId 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, %2
         and esi, 0FFFFh
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         mov %1, al
         add DWORD [rPCx], 3
         add BYTE [TClock], 19
@@ -1468,11 +1465,11 @@ _FD:
 ; ****************************************
 %MACRO __LDIdr 3
         mov al, %2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, %1
         and esi, 0FFFFh
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         add DWORD [rPCx], %3
         add BYTE [TClock], 19
         jmp TLF
@@ -1493,11 +1490,11 @@ _FD:
         movzx esi, WORD [rL]
         mov edi, esi
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         or al, %1
         mov esi, edi
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         add DWORD [rPCx], 2
         add BYTE [TClock], 15
         jmp TLF
@@ -1506,11 +1503,11 @@ _FD:
 ; * Set bit b of location (I$+d)
 ; ********************************
 %MACRO __SETb_Id 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, %2
         and esi, 0FFFFh
         call read_mem
-        __SETbr %1, BYTE [esi], 23, 4
+        __SETbr %1, BYTE [rsi], 23, 4
 %ENDMACRO
 
 ; * Reset bit b of register r
@@ -1528,11 +1525,11 @@ _FD:
         movzx esi, WORD [rL]
         mov edi, esi
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         and al, ~%1
         mov esi, edi
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         add DWORD [rPCx], 2
         add BYTE [TClock], 15
         jmp TLF
@@ -1541,11 +1538,11 @@ _FD:
 ; * Reset bit b of location (I$+d)
 ; **********************************
 %MACRO __RESb_Id 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, %2
         and esi, 0FFFFh
         call read_mem
-        __RESbr %1, BYTE [esi], 23, 4
+        __RESbr %1, BYTE [rsi], 23, 4
 %ENDMACRO
 
 ; * Test bit b of register r
@@ -1567,17 +1564,17 @@ _FD:
 %MACRO __BITb_HL 1
         movzx esi, WORD [rL]
         call read_mem
-        __BITbr %1, BYTE [esi], 12, 2
+        __BITbr %1, BYTE [rsi], 12, 2
 %ENDMACRO
 
 ; * Test bit b of location (I$+d)
 ; *******************************
 %MACRO __BITb_Id 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, %2
         and esi, 0FFFFh
         call read_mem
-        __BITbr %1, BYTE [esi], 20, 4
+        __BITbr %1, BYTE [rsi], 20, 4
 %ENDMACRO
 
 ; * Shift operand m right logical
@@ -1595,15 +1592,15 @@ _FD:
 ; * Load register pair dd with location (nn)
 ; ********************************************
 %MACRO __LDdd_n 1
-        movzx esi, WORD [esi+2]
+        movzx esi, WORD [rsi+2]
         mov edi, esi
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         mov BYTE [%1], al
         mov esi, edi
         inc esi
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         mov BYTE [%1+1], al
         add DWORD [rPCx], 4
         add BYTE [TClock], 20
@@ -1613,22 +1610,22 @@ _FD:
 ; * Load location (nn) with register pair dd
 ; ********************************************
 %MACRO __LD_nn_dd 2
-        movzx esi, WORD [esi+2]
+        movzx esi, WORD [rsi+2]
         cmp esi, 0FFFCh
         jae %%A
         mov %2, [%1]
         call write_mem
-        mov [esi], ax
+        mov [rsi], ax
         jmp %%B
 %%A:    mov edi, esi
         mov al, BYTE [%1]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         mov esi, edi
         inc esi
         mov al, BYTE [%1+1]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
 %%B:    add DWORD [rPCx], 4
         add BYTE [TClock], 20
         jmp TLF
@@ -1663,7 +1660,7 @@ _FD:
 %MACRO __INr_C 1
         and BYTE [Flag], 1
         movzx edx, BYTE [rC]
-        call [read_io+edx*4]
+        call QWORD [read_io+edx*8]
         mov %1, al
         or al, al
         lahf
@@ -1789,7 +1786,7 @@ _FD:
 ; * Carrega a parte low/high do registro de índice com um valor imediato
 ; ************************************************************************
 %MACRO __LDIn 1
-        mov al, [esi+2]
+        mov al, [rsi+2]
         mov %1, al
         add DWORD [rPCx], 3
         add BYTE [TClock], 11
@@ -1812,7 +1809,7 @@ _RLCH:  __RLCr BYTE [rH], 8, 2
 _RLCL:  __RLCr BYTE [rL], 8, 2
 _RLC_HL:movzx esi, WORD [rL]
         call read_mem
-        __RLCr BYTE [esi], 15, 2
+        __RLCr BYTE [rsi], 15, 2
 _RLCA2: __RLCr BYTE [rAcc], 8, 2
 
 ; * RRC r - CB (08-0F) - 8/15 Clk - Rotate operand r right circular
@@ -1826,7 +1823,7 @@ _RRCH:  __RRCr BYTE [rH], 8, 2
 _RRCL:  __RRCr BYTE [rL], 8, 2
 _RRC_HL:movzx esi, WORD [rL]
         call read_mem
-        __RRCr BYTE [esi], 15, 2
+        __RRCr BYTE [rsi], 15, 2
 _RRCA2: __RRCr BYTE [rAcc], 8, 2
 
 ; * RL r - CB (10-17) - 8/15 Clk - Rotate left through operand m
@@ -1840,7 +1837,7 @@ _RLH:   __RLr BYTE [rH], 8, 2
 _RLL:   __RLr BYTE [rL], 8, 2
 _RL_HL:movzx esi, WORD [rL]
         call read_mem
-        __RLr BYTE [esi], 15, 2
+        __RLr BYTE [rsi], 15, 2
 _RLA2:  __RLr BYTE [rAcc], 8, 2
 
 ; * RR r - CB (18-1F) - 8/15 Clk - Rotate right through operand m
@@ -1854,7 +1851,7 @@ _RRH:   __RRr BYTE [rH], 8, 2
 _RRL:   __RRr BYTE [rL], 8, 2
 _RR_HL:movzx esi, WORD [rL]
         call read_mem
-        __RRr BYTE [esi], 15, 2
+        __RRr BYTE [rsi], 15, 2
 _RRA2:  __RRr BYTE [rAcc], 8, 2
 
 ; * SLA m - CB (20-27) - 8/15 Clk - Shift operand m left arithmetic
@@ -1868,7 +1865,7 @@ _SLAH:  __SLAm BYTE [rH], 8, 2
 _SLAL:  __SLAm BYTE [rL], 8, 2
 _SLA_HL:movzx esi, WORD [rL]
         call read_mem
-        __SLAm BYTE [esi], 15, 2
+        __SLAm BYTE [rsi], 15, 2
 _SLAA:  __SLAm BYTE [rAcc], 8, 2
 
 ; * SRA m - CB (28-2F) - 8/15 Clk - Shift operand m right arithmetic
@@ -1882,7 +1879,7 @@ _SRAH:  __SRAm BYTE [rH], 8, 2
 _SRAL:  __SRAm BYTE [rL], 8, 2
 _SRA_HL:movzx esi, WORD [rL]
         call read_mem
-        __SRAm BYTE [esi], 15, 2
+        __SRAm BYTE [rsi], 15, 2
 _SRAA:  __SRAm BYTE [rAcc], 8, 2
 
 ; * SLL m - CB (30-37) - 8/15 Clk - Shift operand m left logic
@@ -1896,7 +1893,7 @@ _SLLH:  __SLLm BYTE [rH], 8, 2
 _SLLL:  __SLLm BYTE [rL], 8, 2
 _SLL_HL:movzx esi, WORD [rL]
         call read_mem
-        __SLLm BYTE [esi], 15, 2
+        __SLLm BYTE [rsi], 15, 2
 _SLLA:  __SLLm BYTE [rAcc], 8, 2
 
 ; * SRL r - CB (38-3F) - 8/15 Clk - Shift operand r right logical
@@ -1910,7 +1907,7 @@ _SRLH:  __SRLr BYTE [rH], 8, 2
 _SRLL:  __SRLr BYTE [rL], 8, 2
 _SRL_HL:movzx esi, WORD [rL]
         call read_mem
-        __SRLr BYTE [esi], 15, 2
+        __SRLr BYTE [rsi], 15, 2
 _SRLA:  __SRLr BYTE [rAcc], 8, 2
 
 ; * BIT 0, r - CB (40-47) - 8/12 Clk - Test bit 0 of operand r
@@ -2218,7 +2215,7 @@ _ADDIXSP:__ADDIpp rIX, rSPx
 ; **********************************************************
 GLOBAL _LDIXN
 _LDIXN:
-        movzx eax, WORD [esi+2]
+        movzx eax, WORD [rsi+2]
         mov DWORD [rIX], eax
         add DWORD [rPCx], 4
         add BYTE [TClock], 14
@@ -2229,9 +2226,9 @@ _LDIXN:
 GLOBAL _LD_N_IX
 _LD_N_IX:
         mov eax, DWORD [rIX]
-        movzx esi, WORD [esi+2]
+        movzx esi, WORD [rsi+2]
         call write_mem
-        mov [esi], ax
+        mov [rsi], ax
         add DWORD [rPCx], 4
         add BYTE [TClock], 20
         jmp TLF
@@ -2266,9 +2263,9 @@ _LDIXHN:
 ; *****************************************************************
 GLOBAL _LDIX_N
 _LDIX_N:
-        movzx esi, WORD [esi+2]
+        movzx esi, WORD [rsi+2]
         call read_mem
-        mov ax, [esi]
+        mov ax, [rsi]
         mov WORD [rIX], ax
         add DWORD [rPCx], 4
         add BYTE [TClock], 20
@@ -2305,22 +2302,22 @@ _LDIXLN:
 GLOBAL _INC_IXd
 _INC_IXd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __INCr BYTE [esi], 23
+        __INCr BYTE [rsi], 23
 
 ; * DEC (IX+d) - DD 35 - 23 Clk - Decrement operand s
 ; *****************************************************
 GLOBAL _DEC_IXd
 _DEC_IXd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __DECr BYTE [esi], 23
+        __DECr BYTE [rsi], 23
 
 ; * LD r, IXH - DD (44,4C,54,5C,7C) - Carrega registrador com a parte high do registro de índice
 ; ******************************************************************************************************
@@ -2383,7 +2380,7 @@ _LD_IXD_E:__LDIdr DWORD [rIX], BYTE [rE], 3
 _LD_IXD_H:__LDIdr DWORD [rIX], BYTE [rH], 3
 _LD_IXD_L:__LDIdr DWORD [rIX], BYTE [rL], 3
 _LD_IXD_A:__LDIdr DWORD [rIX], BYTE [rAcc], 3
-_LD_IXD_N:__LDIdr DWORD [rIX], [esi+3], 4
+_LD_IXD_N:__LDIdr DWORD [rIX], [rsi+3], 4
 
 ; * ADD IXH - DD 84 - 8 Clk - Add IXH to accumulator
 ; ****************************************************
@@ -2404,22 +2401,22 @@ _ADDIXL:
 GLOBAL _ADDA_IXd
 _ADDA_IXd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __ADDAs [esi], 16
+        __ADDAs [rsi], 16
 
 ; * ADC A, (IX+d) - DD 8E - 19 Clk - Add operand s to accumulator with carry
 ; ****************************************************************************
 GLOBAL _ADCA_IXd
 _ADCA_IXd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __ADCAs [esi], 19
+        __ADCAs [rsi], 19
 
 ; * SUB IXH - DD 94 - 8 Clk - Subtract IXH from accumulator
 ; ***********************************************************
@@ -2440,22 +2437,22 @@ _SUBIXL:
 GLOBAL _SUB_IXd
 _SUB_IXd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __SUBs [esi], 19
+        __SUBs [rsi], 19
 
 ; * SBC A, (IX+d) - DD 9E d - 19 Clk - Subtract location (IX+d) from accumulator with carry
 ; *******************************************************************************************
 GLOBAL _SBCA_IXd
 _SBCA_IXd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __SBCAs [esi], 19
+        __SBCAs [rsi], 19
 
 ; * AND IXH - DD A4 - 8 Clk - Logical AND of IXH to accumulator
 ; ***************************************************************
@@ -2476,22 +2473,22 @@ _ANDIXL:
 GLOBAL _AND_IXd
 _AND_IXd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __ANDs [esi], 19
+        __ANDs [rsi], 19
 
 ; * XOR (IX+d) DD AE d - 19 Clk - Exclusive OR operand r and accumulator
 ; ************************************************************************
 GLOBAL _XOR_IXd
 _XOR_IXd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __XORs [esi], 19
+        __XORs [rsi], 19
 
 ; * OR IXH - DD B4 - 8 Clk - Logical OR of IXH and accumulator
 ; **************************************************************
@@ -2512,11 +2509,11 @@ _ORIXL:
 GLOBAL _OR_IXd
 _OR_IXd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __ORs [esi], 19
+        __ORs [rsi], 19
 
 ; * CP IXH - DD BC - 8 Clk - Compare IXH with accumulator
 ; *********************************************************
@@ -2537,19 +2534,19 @@ _CPIXL:
 GLOBAL _CP_IXd
 _CP_IXd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __CPs [esi], 19
+        __CPs [rsi], 19
 
 ; * Prefix DD CB
 ; ****************
 GLOBAL _DDCB
 _DDCB:
 ;       inc BYTE [rR]
-        movzx edx, BYTE [esi+3]
-        jmp [OpcodeDDCB+edx*4]
+        movzx edx, BYTE [rsi+3]
+        jmp QWORD [OpcodeDDCB+edx*8]
 
 ; * POP IX - DD E1 - 14 Clk - Load IX with top of stack
 ; *******************************************************
@@ -2558,7 +2555,7 @@ _POPIX:
         mov esi, DWORD [rSPx]
         add DWORD [rSPx], 2
         call read_mem
-        movzx eax, WORD [esi]
+        movzx eax, WORD [rsi]
         mov DWORD [rIX], eax
         add DWORD [rPCx], 2
         add BYTE [TClock], 14
@@ -2579,7 +2576,7 @@ _PUSHIX:
         sub DWORD [rSPx], 2
         mov esi, DWORD [rSPx]
         call write_mem
-        mov [esi], ax
+        mov [rsi], ax
         add DWORD [rPCx], 2
         add BYTE [TClock], 15
         jmp TLF
@@ -2612,71 +2609,71 @@ _LDSPIX:
 ; *********************************************************************
 GLOBAL _RLC_IXd
 _RLC_IXd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __RLCr BYTE [esi], 23, 4
+        __RLCr BYTE [rsi], 23, 4
 
 ; * RRC (IX+d) - DD CB d 0E - 23 Clk - Rotate operand r right circular
 ; **********************************************************************
 GLOBAL _RRC_IXd
 _RRC_IXd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __RRCr BYTE [esi], 23, 4
+        __RRCr BYTE [rsi], 23, 4
 
 ; * RL (IX+d) - DD CB d 16 - 23 Clk - Rotate left through carry operand m
 ; *************************************************************************
 GLOBAL _RL_IXd
 _RL_IXd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __RLr BYTE [esi], 23, 4
+        __RLr BYTE [rsi], 23, 4
 
 ; * RR (IX+d) - DD CB d 1E - 23 Clk - Rotate right through carry operand m
 ; **************************************************************************
 GLOBAL _RR_IXd
 _RR_IXd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __RRr BYTE [esi], 23, 4
+        __RRr BYTE [rsi], 23, 4
 
 ; * SLA (IX+d) - DD CB d 26 - 23 Clk - Shift operand m left arithmetic
 ; **********************************************************************
 GLOBAL _SLA_IXd
 _SLA_IXd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __SLAm BYTE [esi], 23, 4
+        __SLAm BYTE [rsi], 23, 4
 
 ; * SRA (IX+d) - DD CB d 2E - 23 Clk - Shift operand m right arithmetic
 ; ***********************************************************************
 GLOBAL _SRA_IXd
 _SRA_IXd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __SRAm BYTE [esi], 23, 4
+        __SRAm BYTE [rsi], 23, 4
 
 ; * SRL (IX+d) - DD CB d 3E - 23 Clk - Shift operand m right logical
 ; ********************************************************************
 GLOBAL _SRL_IXd
 _SRL_IXd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIX]
         and esi, 0FFFFh
         call read_mem
-        __SRLr BYTE [esi], 23, 4
+        __SRLr BYTE [rsi], 23, 4
 
 ; * BIT b, (IX+d) - DD CB d (46,4E,56,5E,66,6E,76,7E) - 20 Clk - Test bit b of location (IX+d)
 ; **********************************************************************************************
@@ -2781,7 +2778,7 @@ _RETN:
         mov esi, DWORD [rSPx]
         add DWORD [rSPx], 2
         call read_mem
-        movzx eax, WORD [esi]
+        movzx eax, WORD [rsi]
         mov DWORD [rPCx], eax
         add BYTE [TClock], 14
         jmp TLF
@@ -2829,7 +2826,7 @@ _RETI:
         mov esi, DWORD [rSPx]
         add DWORD [rSPx], 2
         call read_mem
-        movzx eax, WORD [esi]
+        movzx eax, WORD [rsi]
         mov DWORD [rPCx], eax
         add BYTE [TClock], 14
         jmp TLF
@@ -2889,13 +2886,13 @@ _RRD:
         and BYTE [Flag], 1
         movzx esi, WORD [rL]
         call read_mem
-        mov bl, [esi]
+        mov bl, [rsi]
         and bl, 0Fh
         mov al, BYTE [rAcc]
         shl al, 4
         and BYTE [rAcc], 0F0h
-        shr BYTE [esi], 4
-        or [esi], al
+        shr BYTE [rsi], 4
+        or [rsi], al
         or BYTE [rAcc], bl
         lahf
         and ah, 11000100b
@@ -2911,13 +2908,13 @@ _RLD:
         and BYTE [Flag], 1
         movzx esi, WORD [rL]
         call read_mem
-        mov bl, [esi]
+        mov bl, [rsi]
         shr bl, 4
         mov al, BYTE [rAcc]
         and al, 0Fh
         and BYTE [rAcc], 0F0h
-        shl BYTE [esi], 4
-        or [esi], al
+        shl BYTE [rsi], 4
+        or [rsi], al
         or BYTE [rAcc], bl
         lahf
         and ah, 11000100b
@@ -2934,11 +2931,11 @@ _LDI:
         movzx esi, WORD [rL]
         inc WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         movzx esi, WORD [rE]
         inc WORD [rE]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         dec WORD [rC]
         jz LDI0
         or BYTE [Flag], 4
@@ -2955,7 +2952,7 @@ _CPI:
         movzx esi, WORD [rL]
         inc WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         cmp BYTE [rAcc], al
         lahf
         and ah, 11010000b
@@ -2974,10 +2971,10 @@ _INI:
         and BYTE [Flag], 1
         or BYTE [Flag], 2
         movzx edx, BYTE [rC]
-        call [read_io+edx*4]
+        call QWORD [read_io+edx*8]
         movzx esi, WORD [rL]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         inc WORD [rL]
         dec BYTE [rB]
         jnz INI0
@@ -2993,9 +2990,9 @@ _OUTI:
         movzx esi, WORD [rL]
         inc WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         movzx edx, BYTE [rC]
-        call [write_io+edx*4]
+        call QWORD [write_io+edx*8]
         dec BYTE [rB]
         lahf
         and ah, 0C0h
@@ -3012,11 +3009,11 @@ _LDD:
         movzx esi, WORD [rL]
         dec WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         movzx esi, WORD [rE]
         dec WORD [rE]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         dec WORD [rC]
         jz LDD0
         or BYTE [Flag], 4
@@ -3032,7 +3029,7 @@ _CPD:
         or BYTE [Flag], 2
         movzx esi, WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         cmp BYTE [rAcc], al
         lahf
         and ah, 11010000b
@@ -3052,9 +3049,9 @@ _OUTD:
         movzx esi, WORD [rL]
         dec WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         movzx edx, BYTE [rC]
-        call [write_io+edx*4]
+        call QWORD [write_io+edx*8]
         dec BYTE [rB]
         lahf
         and ah, 0C0h
@@ -3072,11 +3069,11 @@ _LDIR:
         movzx esi, WORD [rL]
         inc WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         movzx esi, WORD [rE]
         inc WORD [rE]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         dec WORD [rC]
         jz LDIR0
         add BYTE [TClock], 21
@@ -3094,7 +3091,7 @@ _CPIR:
         movzx esi, WORD [rL]
         inc WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         cmp BYTE [rAcc], al
         lahf
         and ah, 11010000b
@@ -3117,11 +3114,11 @@ _INIR:
         and BYTE [Flag], 1
         or BYTE [Flag], 42h
         movzx edx, BYTE [rC]
-        call [read_io+edx*4]
+        call QWORD [read_io+edx*8]
         movzx esi, WORD [rL]
         inc WORD [rL]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         dec BYTE [rB]
         jz INIR0
         add BYTE [TClock], 21
@@ -3139,9 +3136,9 @@ _OTIR:
         movzx esi, WORD [rL]
         inc WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         movzx edx, BYTE [rC]
-        call [write_io+edx*4]
+        call QWORD [write_io+edx*8]
         dec BYTE [rB]
         jz OTIR0
         add BYTE [TClock], 21
@@ -3158,11 +3155,11 @@ _LDDR:
         movzx esi, WORD [rL]
         dec WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         movzx esi, WORD [rE]
         dec WORD [rE]
         call write_mem
-        mov [esi], al
+        mov [rsi], al
         dec WORD [rC]
         jz LDDR0
         add BYTE [TClock], 21
@@ -3180,7 +3177,7 @@ _CPDR:
         movzx esi, WORD [rL]
         dec WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         cmp BYTE [rAcc], al
         lahf
         and ah, 11010000b
@@ -3205,9 +3202,9 @@ _OTDR:
         movzx esi, WORD [rL]
         dec WORD [rL]
         call read_mem
-        mov al, [esi]
+        mov al, [rsi]
         movzx edx, BYTE [rC]
-        call [write_io+edx*4]
+        call QWORD [write_io+edx*8]
         dec BYTE [rB]
         jz OTDR0
         add BYTE [TClock], 21
@@ -3233,7 +3230,7 @@ _ADDIYSP:__ADDIpp rIY, rSPx
 ; ******************************************************
 GLOBAL _LDIYN
 _LDIYN:
-        movzx eax, WORD [esi+2]
+        movzx eax, WORD [rsi+2]
         mov DWORD [rIY], eax
         add DWORD [rPCx], 4
         add BYTE [TClock], 14
@@ -3244,9 +3241,9 @@ _LDIYN:
 GLOBAL _LD_N_IY
 _LD_N_IY:
         mov eax, DWORD [rIY]
-        movzx esi, WORD [esi+2]
+        movzx esi, WORD [rsi+2]
         call write_mem
-        mov [esi], ax
+        mov [rsi], ax
         add DWORD [rPCx], 4
         add BYTE [TClock], 20
         jmp TLF
@@ -3281,9 +3278,9 @@ _LDIYHN:
 ; *****************************************************************
 GLOBAL _LDIY_N
 _LDIY_N:
-        movzx esi, WORD [esi+2]
+        movzx esi, WORD [rsi+2]
         call read_mem
-        mov ax, [esi]
+        mov ax, [rsi]
         mov WORD [rIY], ax
         add DWORD [rPCx], 4
         add BYTE [TClock], 20
@@ -3320,22 +3317,22 @@ _LDIYLN:
 GLOBAL _INC_IYd
 _INC_IYd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __INCr BYTE [esi], 23
+        __INCr BYTE [rsi], 23
 
 ; * DEC (IY+d) - FD 35 - 23 Clk - Decrement operand s
 ; *****************************************************
 GLOBAL _DEC_IYd
 _DEC_IYd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __DECr BYTE [esi], 23
+        __DECr BYTE [rsi], 23
 
 ; * LD r, IYH - FD (44,4C,54,5C,7C) - Carrega registrador com a parte high do registro de índice
 ; ******************************************************************************************************
@@ -3398,7 +3395,7 @@ _LD_IYD_E:__LDIdr DWORD [rIY], BYTE [rE], 3
 _LD_IYD_H:__LDIdr DWORD [rIY], BYTE [rH], 3
 _LD_IYD_L:__LDIdr DWORD [rIY], BYTE [rL], 3
 _LD_IYD_A:__LDIdr DWORD [rIY], BYTE [rAcc], 3
-_LD_IYD_N:__LDIdr DWORD [rIY], [esi+3], 4
+_LD_IYD_N:__LDIdr DWORD [rIY], [rsi+3], 4
 
 ; * ADD IYH - FD 84 - 8 Clk - Add IYH to accumulator
 ; ****************************************************
@@ -3419,22 +3416,22 @@ _ADDIYL:
 GLOBAL _ADDA_IYd
 _ADDA_IYd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __ADDAs [esi], 16
+        __ADDAs [rsi], 16
 
 ; * ADC A, (IY+d) - FD 8E - 19 Clk - Add operand s to accumulator with carry
 ; ****************************************************************************
 GLOBAL _ADCA_IYd
 _ADCA_IYd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __ADCAs [esi], 19
+        __ADCAs [rsi], 19
 
 ; * SUB IYH - FD 94 - 8 Clk - Subtract IYH from accumulator
 ; ***********************************************************
@@ -3455,22 +3452,22 @@ _SUBIYL:
 GLOBAL _SUB_IYd
 _SUB_IYd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __SUBs [esi], 19
+        __SUBs [rsi], 19
 
 ; * SBC A, (IY+d) - FD 9E d - 19 Clk - Subtract location (IY+d) from accumulator with carry
 ; *******************************************************************************************
 GLOBAL _SBCA_IYd
 _SBCA_IYd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __SBCAs [esi], 19
+        __SBCAs [rsi], 19
 
 ; * AND IYH - FD A4 - 8 Clk - Logical AND of IYH to accumulator
 ; ***************************************************************
@@ -3491,22 +3488,22 @@ _ANDIYL:
 GLOBAL _AND_IYd
 _AND_IYd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __ANDs [esi], 19
+        __ANDs [rsi], 19
 
 ; * XOR (IY+d) FD AE d - 19 Clk - Exclusive OR operand r and accumulator
 ; ************************************************************************
 GLOBAL _XOR_IYd
 _XOR_IYd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __XORs [esi], 19
+        __XORs [rsi], 19
 
 ; * OR IYH - FD B4 - 8 Clk - Logical OR of IYH and accumulator
 ; **************************************************************
@@ -3527,11 +3524,11 @@ _ORIYL:
 GLOBAL _OR_IYd
 _OR_IYd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __ORs [esi], 19
+        __ORs [rsi], 19
 
 ; * CP IYH - FD BC - 8 Clk - Compare IYH with accumulator
 ; *********************************************************
@@ -3552,19 +3549,19 @@ _CPIYL:
 GLOBAL _CP_IYd
 _CP_IYd:
         add DWORD [rPCx], 2
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __CPs [esi], 19
+        __CPs [rsi], 19
 
 ; * Prefix FD CB
 ; ****************
 GLOBAL _FDCB
 _FDCB:
 ;       inc BYTE [rR]
-        movzx edx, BYTE [esi+3]
-        jmp [OpcodeFDCB+edx*4]
+        movzx edx, BYTE [rsi+3]
+        jmp QWORD [OpcodeFDCB+edx*8]
 
 ; * POP IY - FD E1 - 14 Clk - Load IY with top of stack
 ; *******************************************************
@@ -3573,7 +3570,7 @@ _POPIY:
         mov esi, DWORD [rSPx]
         add DWORD [rSPx], 2
         call read_mem
-        movzx eax, WORD [esi]
+        movzx eax, WORD [rsi]
         mov DWORD [rIY], eax
         add DWORD [rPCx], 2
         add BYTE [TClock], 14
@@ -3594,7 +3591,7 @@ _PUSHIY:
         sub DWORD [rSPx], 2
         mov esi, DWORD [rSPx]
         call write_mem
-        mov [esi], ax
+        mov [rsi], ax
         add DWORD [rPCx], 2
         add BYTE [TClock], 15
         jmp TLF
@@ -3627,71 +3624,71 @@ _LDSPIY:
 ; *********************************************************************
 GLOBAL _RLC_IYd
 _RLC_IYd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __RLCr BYTE [esi], 23, 4
+        __RLCr BYTE [rsi], 23, 4
 
 ; * RRC (IY+d) - FD CB d 0E - 23 Clk - Rotate operand r right circular
 ; **********************************************************************
 GLOBAL _RRC_IYd
 _RRC_IYd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __RRCr BYTE [esi], 23, 4
+        __RRCr BYTE [rsi], 23, 4
 
 ; * RL (IY+d) - FD CB d 16 - 23 Clk - Rotate left through carry operand m
 ; *************************************************************************
 GLOBAL _RL_IYd
 _RL_IYd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __RLr BYTE [esi], 23, 4
+        __RLr BYTE [rsi], 23, 4
 
 ; * RR (IY+d) - FD CB d 1E - 23 Clk - Rotate right through carry operand m
 ; **************************************************************************
 GLOBAL _RR_IYd
 _RR_IYd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __RRr BYTE [esi], 23, 4
+        __RRr BYTE [rsi], 23, 4
 
 ; * SLA (IY+d) - FD CB d 26 - 23 Clk - Shift operand m left arithmetic
 ; **********************************************************************
 GLOBAL _SLA_IYd
 _SLA_IYd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __SLAm BYTE [esi], 23, 4
+        __SLAm BYTE [rsi], 23, 4
 
 ; * SRA (IY+d) - FD CB d 2E - 23 Clk - Shift operand m right arithmetic
 ; ***********************************************************************
 GLOBAL _SRA_IYd
 _SRA_IYd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __SRAm BYTE [esi], 23, 4
+        __SRAm BYTE [rsi], 23, 4
 
 ; * SRL (IY+d) - FD CB d 3E - 23 Clk - Shift operand m right logical
 ; ********************************************************************
 GLOBAL _SRL_IYd
 _SRL_IYd:
-        movsx esi, BYTE [esi+2]
+        movsx esi, BYTE [rsi+2]
         add esi, DWORD [rIY]
         and esi, 0FFFFh
         call read_mem
-        __SRLr BYTE [esi], 23, 4
+        __SRLr BYTE [rsi], 23, 4
 
 ; * BIT b, (IY+d) - FD CB d (46,4E,56,5E,66,6E,76,7E) - 20 Clk - Test bit b of location (IY+d)
 ; **********************************************************************************************
@@ -3736,257 +3733,257 @@ SECTION .data
 GLOBAL Opcode
 Opcode:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DD _NOP,     _LDBCN,   _LD_BC_A, _INCBC,   _INCB,    _DECB,    _LDBN,    _RLCA
-    DD _EXAFAF,  _ADDHLBC, _LDA_BC,  _DECBC,   _INCC,    _DECC,    _LDCN,    _RRCA      ; 0
-    DD _DJNZ,    _LDDEN,   _LD_DE_A, _INCDE,   _INCD,    _DECD,    _LDDN,    _RLA
-    DD _JRE,     _ADDHLDE, _LDA_DE,  _DECDE,   _INCE,    _DECE,    _LDEN,    _RRA       ; 1
-    DD _JRNZE,   _LDHLN,   _LD_N_HL, _INCHL,   _INCH,    _DECH,    _LDHN,    _DAA
-    DD _JRZE,    _ADDHLHL, _LDHL_N2, _DECHL,   _INCL,    _DECL,    _LDLN,    __CPL      ; 2
-    DD _JRNCE,   _LDSPN,   _LD_N_A,  _INCSP,   _INC_HL,  _DEC_HL,  _LD_HL_N, _SCF
-    DD _JRCE,    _ADDHLSP, _LDA_N,   _DECSP,   _INCA,    _DECA,    _LDAN,    _CCF       ; 3
-    DD _LDBB,    _LDBC,    _LDBD,    _LDBE,    _LDBH,    _LDBL,    _LDB_HL,  _LDBA
-    DD _LDCB,    _LDCC,    _LDCD,    _LDCE,    _LDCH,    _LDCL,    _LDC_HL,  _LDCA      ; 4
-    DD _LDDB,    _LDDC,    _LDDD,    _LDDE,    _LDDH,    _LDDL,    _LDD_HL,  _LDDA
-    DD _LDEB,    _LDEC,    _LDED,    _LDEE,    _LDEH,    _LDEL,    _LDE_HL,  _LDEA      ; 5
-    DD _LDHB,    _LDHC,    _LDHD,    _LDHE,    _LDHH,    _LDHL,    _LDH_HL,  _LDHA
-    DD _LDLB,    _LDLC,    _LDLD,    _LDLE,    _LDLH,    _LDLL,    _LDL_HL,  _LDLA      ; 6
-    DD _LD_HL_B, _LD_HL_C, _LD_HL_D, _LD_HL_E, _LD_HL_H, _LD_HL_L, _HALT,    _LD_HL_A
-    DD _LDAB,    _LDAC,    _LDAD,    _LDAE,    _LDAH,    _LDAL,    _LDA_HL,  _LDAA      ; 7
-    DD _ADDAB,   _ADDAC,   _ADDAD,   _ADDAE,   _ADDAH,   _ADDAL,   _ADDA_HL, _ADDAA
-    DD _ADCAB,   _ADCAC,   _ADCAD,   _ADCAE,   _ADCAH,   _ADCAL,   _ADCA_HL, _ADCAA     ; 8
-    DD _SUBB,    _SUBC,    _SUBD,    _SUBE,    _SUBH,    _SUBL,    _SUB_HL,  _SUBA
-    DD _SBCAB,   _SBCAC,   _SBCAD,   _SBCAE,   _SBCAH,   _SBCAL,   _SBCA_HL, _SBCAA     ; 9
-    DD _ANDB,    _ANDC,    _ANDD,    _ANDE,    _ANDH,    _ANDL,    _AND_HL,  _ANDA
-    DD _XORB,    _XORC,    _XORD,    _XORE,    _XORH,    _XORL,    _XOR_HL,  _XORA      ; A
-    DD _ORB,     _ORC,     _ORD,     _ORE,     _ORH,     _ORL,     _OR_HL,   _ORA
-    DD _CPB,     _CPC,     _CPD2,    _CPE,     _CPH,     _CPL,     _CP_HL,   _CPA       ; B
-    DD _RETNZ,   _POPBC,   _JPNZN,   _JPN,     _CALLNZN, _PUSHBC,  _ADDAN,   _RST0
-    DD _RETZ,    _RET,     _JPZN,    _CB,      _CALLZN,  _CALLN,   _ADCAN,   _RST8      ; C
-    DD _RETNC,   _POPDE,   _JPNCN,   _OUTNA,   _CALLNCN, _PUSHDE,  _SUBN,    _RST10
-    DD _RETC,    _EXX,     _JPCN,    _INA_N,   _CALLCN,  _DD,      _SBCAN,   _RST18     ; D
-    DD _RETPO,   _POPHL,   _JPPON,   _EX_SP_HL,_CALLPON, _PUSHHL,  _ANDN,    _RST20
-    DD _RETPE,   _JP_HL,   _JPPEN,   _EXDEHL,  _CALLPEN, _ED,      _XORN,    _RST28     ; E
-    DD _RETP,    _POPAF,   _JPPN,    _DI,      _CALLPN,  _PUSHAF,  _ORN,     _RST30
-    DD _RETM,    _LDSPHL,  _JPMN,    _EI,      _CALLMN,  _FD,      _CPN,     _RST38     ; F
+    DQ _NOP,     _LDBCN,   _LD_BC_A, _INCBC,   _INCB,    _DECB,    _LDBN,    _RLCA
+    DQ _EXAFAF,  _ADDHLBC, _LDA_BC,  _DECBC,   _INCC,    _DECC,    _LDCN,    _RRCA      ; 0
+    DQ _DJNZ,    _LDDEN,   _LD_DE_A, _INCDE,   _INCD,    _DECD,    _LDDN,    _RLA
+    DQ _JRE,     _ADDHLDE, _LDA_DE,  _DECDE,   _INCE,    _DECE,    _LDEN,    _RRA       ; 1
+    DQ _JRNZE,   _LDHLN,   _LD_N_HL, _INCHL,   _INCH,    _DECH,    _LDHN,    _DAA
+    DQ _JRZE,    _ADDHLHL, _LDHL_N2, _DECHL,   _INCL,    _DECL,    _LDLN,    __CPL      ; 2
+    DQ _JRNCE,   _LDSPN,   _LD_N_A,  _INCSP,   _INC_HL,  _DEC_HL,  _LD_HL_N, _SCF
+    DQ _JRCE,    _ADDHLSP, _LDA_N,   _DECSP,   _INCA,    _DECA,    _LDAN,    _CCF       ; 3
+    DQ _LDBB,    _LDBC,    _LDBD,    _LDBE,    _LDBH,    _LDBL,    _LDB_HL,  _LDBA
+    DQ _LDCB,    _LDCC,    _LDCD,    _LDCE,    _LDCH,    _LDCL,    _LDC_HL,  _LDCA      ; 4
+    DQ _LDDB,    _LDDC,    _LDDD,    _LDDE,    _LDDH,    _LDDL,    _LDD_HL,  _LDDA
+    DQ _LDEB,    _LDEC,    _LDED,    _LDEE,    _LDEH,    _LDEL,    _LDE_HL,  _LDEA      ; 5
+    DQ _LDHB,    _LDHC,    _LDHD,    _LDHE,    _LDHH,    _LDHL,    _LDH_HL,  _LDHA
+    DQ _LDLB,    _LDLC,    _LDLD,    _LDLE,    _LDLH,    _LDLL,    _LDL_HL,  _LDLA      ; 6
+    DQ _LD_HL_B, _LD_HL_C, _LD_HL_D, _LD_HL_E, _LD_HL_H, _LD_HL_L, _HALT,    _LD_HL_A
+    DQ _LDAB,    _LDAC,    _LDAD,    _LDAE,    _LDAH,    _LDAL,    _LDA_HL,  _LDAA      ; 7
+    DQ _ADDAB,   _ADDAC,   _ADDAD,   _ADDAE,   _ADDAH,   _ADDAL,   _ADDA_HL, _ADDAA
+    DQ _ADCAB,   _ADCAC,   _ADCAD,   _ADCAE,   _ADCAH,   _ADCAL,   _ADCA_HL, _ADCAA     ; 8
+    DQ _SUBB,    _SUBC,    _SUBD,    _SUBE,    _SUBH,    _SUBL,    _SUB_HL,  _SUBA
+    DQ _SBCAB,   _SBCAC,   _SBCAD,   _SBCAE,   _SBCAH,   _SBCAL,   _SBCA_HL, _SBCAA     ; 9
+    DQ _ANDB,    _ANDC,    _ANDD,    _ANDE,    _ANDH,    _ANDL,    _AND_HL,  _ANDA
+    DQ _XORB,    _XORC,    _XORD,    _XORE,    _XORH,    _XORL,    _XOR_HL,  _XORA      ; A
+    DQ _ORB,     _ORC,     _ORD,     _ORE,     _ORH,     _ORL,     _OR_HL,   _ORA
+    DQ _CPB,     _CPC,     _CPD2,    _CPE,     _CPH,     _CPL,     _CP_HL,   _CPA       ; B
+    DQ _RETNZ,   _POPBC,   _JPNZN,   _JPN,     _CALLNZN, _PUSHBC,  _ADDAN,   _RST0
+    DQ _RETZ,    _RET,     _JPZN,    _CB,      _CALLZN,  _CALLN,   _ADCAN,   _RST8      ; C
+    DQ _RETNC,   _POPDE,   _JPNCN,   _OUTNA,   _CALLNCN, _PUSHDE,  _SUBN,    _RST10
+    DQ _RETC,    _EXX,     _JPCN,    _INA_N,   _CALLCN,  _DD,      _SBCAN,   _RST18     ; D
+    DQ _RETPO,   _POPHL,   _JPPON,   _EX_SP_HL,_CALLPON, _PUSHHL,  _ANDN,    _RST20
+    DQ _RETPE,   _JP_HL,   _JPPEN,   _EXDEHL,  _CALLPEN, _ED,      _XORN,    _RST28     ; E
+    DQ _RETP,    _POPAF,   _JPPN,    _DI,      _CALLPN,  _PUSHAF,  _ORN,     _RST30
+    DQ _RETM,    _LDSPHL,  _JPMN,    _EI,      _CALLMN,  _FD,      _CPN,     _RST38     ; F
 
 ; Opcode table  (CB)
 GLOBAL OpcodeCB
 OpcodeCB:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DD _RLCB,    _RLCC,    _RLCD,    _RLCE,    _RLCH,    _RLCL,    _RLC_HL,  _RLCA2
-    DD _RRCB,    _RRCC,    _RRCD,    _RRCE,    _RRCH,    _RRCL,    _RRC_HL,  _RRCA2     ; 0
-    DD _RLB,     _RLC,     _RLD2,    _RLE,     _RLH,     _RLL,     _RL_HL,   _RLA2
-    DD _RRB,     _RRC,     _RRD2,    _RRE,     _RRH,     _RRL,     _RR_HL,   _RRA2      ; 1
-    DD _SLAB,    _SLAC,    _SLAD,    _SLAE,    _SLAH,    _SLAL,    _SLA_HL,  _SLAA
-    DD _SRAB,    _SRAC,    _SRAD,    _SRAE,    _SRAH,    _SRAL,    _SRA_HL,  _SRAA      ; 2
-    DD _SLLB,    _SLLC,    _SLLD,    _SLLE,    _SLLH,    _SLLL,    _SLL_HL,  _SLLA
-    DD _SRLB,    _SRLC,    _SRLD,    _SRLE,    _SRLH,    _SRLL,    _SRL_HL,  _SRLA      ; 3
-    DD _BIT0B,   _BIT0C,   _BIT0D,   _BIT0E,   _BIT0H,   _BIT0L,   _BIT0_HL, _BIT0A
-    DD _BIT1B,   _BIT1C,   _BIT1D,   _BIT1E,   _BIT1H,   _BIT1L,   _BIT1_HL, _BIT1A     ; 4
-    DD _BIT2B,   _BIT2C,   _BIT2D,   _BIT2E,   _BIT2H,   _BIT2L,   _BIT2_HL, _BIT2A
-    DD _BIT3B,   _BIT3C,   _BIT3D,   _BIT3E,   _BIT3H,   _BIT3L,   _BIT3_HL, _BIT3A     ; 5
-    DD _BIT4B,   _BIT4C,   _BIT4D,   _BIT4E,   _BIT4H,   _BIT4L,   _BIT4_HL, _BIT4A
-    DD _BIT5B,   _BIT5C,   _BIT5D,   _BIT5E,   _BIT5H,   _BIT5L,   _BIT5_HL, _BIT5A     ; 6
-    DD _BIT6B,   _BIT6C,   _BIT6D,   _BIT6E,   _BIT6H,   _BIT6L,   _BIT6_HL, _BIT6A
-    DD _BIT7B,   _BIT7C,   _BIT7D,   _BIT7E,   _BIT7H,   _BIT7L,   _BIT7_HL, _BIT7A     ; 7
-    DD _RES0B,   _RES0C,   _RES0D,   _RES0E,   _RES0H,   _RES0L,   _RES0_HL, _RES0A
-    DD _RES1B,   _RES1C,   _RES1D,   _RES1E,   _RES1H,   _RES1L,   _RES1_HL, _RES1A     ; 8
-    DD _RES2B,   _RES2C,   _RES2D,   _RES2E,   _RES2H,   _RES2L,   _RES2_HL, _RES2A
-    DD _RES3B,   _RES3C,   _RES3D,   _RES3E,   _RES3H,   _RES3L,   _RES3_HL, _RES3A     ; 9
-    DD _RES4B,   _RES4C,   _RES4D,   _RES4E,   _RES4H,   _RES4L,   _RES4_HL, _RES4A
-    DD _RES5B,   _RES5C,   _RES5D,   _RES5E,   _RES5H,   _RES5L,   _RES5_HL, _RES5A     ; A
-    DD _RES6B,   _RES6C,   _RES6D,   _RES6E,   _RES6H,   _RES6L,   _RES6_HL, _RES6A
-    DD _RES7B,   _RES7C,   _RES7D,   _RES7E,   _RES7H,   _RES7L,   _RES7_HL, _RES7A     ; B
-    DD _SET0B,   _SET0C,   _SET0D,   _SET0E,   _SET0H,   _SET0L,   _SET0_HL, _SET0A
-    DD _SET1B,   _SET1C,   _SET1D,   _SET1E,   _SET1H,   _SET1L,   _SET1_HL, _SET1A     ; C
-    DD _SET2B,   _SET2C,   _SET2D,   _SET2E,   _SET2H,   _SET2L,   _SET2_HL, _SET2A
-    DD _SET3B,   _SET3C,   _SET3D,   _SET3E,   _SET3H,   _SET3L,   _SET3_HL, _SET3A     ; D
-    DD _SET4B,   _SET4C,   _SET4D,   _SET4E,   _SET4H,   _SET4L,   _SET4_HL, _SET4A
-    DD _SET5B,   _SET5C,   _SET5D,   _SET5E,   _SET5H,   _SET5L,   _SET5_HL, _SET5A     ; E
-    DD _SET6B,   _SET6C,   _SET6D,   _SET6E,   _SET6H,   _SET6L,   _SET6_HL, _SET6A
-    DD _SET7B,   _SET7C,   _SET7D,   _SET7E,   _SET7H,   _SET7L,   _SET7_HL, _SET7A     ; F
+    DQ _RLCB,    _RLCC,    _RLCD,    _RLCE,    _RLCH,    _RLCL,    _RLC_HL,  _RLCA2
+    DQ _RRCB,    _RRCC,    _RRCD,    _RRCE,    _RRCH,    _RRCL,    _RRC_HL,  _RRCA2     ; 0
+    DQ _RLB,     _RLC,     _RLD2,    _RLE,     _RLH,     _RLL,     _RL_HL,   _RLA2
+    DQ _RRB,     _RRC,     _RRD2,    _RRE,     _RRH,     _RRL,     _RR_HL,   _RRA2      ; 1
+    DQ _SLAB,    _SLAC,    _SLAD,    _SLAE,    _SLAH,    _SLAL,    _SLA_HL,  _SLAA
+    DQ _SRAB,    _SRAC,    _SRAD,    _SRAE,    _SRAH,    _SRAL,    _SRA_HL,  _SRAA      ; 2
+    DQ _SLLB,    _SLLC,    _SLLD,    _SLLE,    _SLLH,    _SLLL,    _SLL_HL,  _SLLA
+    DQ _SRLB,    _SRLC,    _SRLD,    _SRLE,    _SRLH,    _SRLL,    _SRL_HL,  _SRLA      ; 3
+    DQ _BIT0B,   _BIT0C,   _BIT0D,   _BIT0E,   _BIT0H,   _BIT0L,   _BIT0_HL, _BIT0A
+    DQ _BIT1B,   _BIT1C,   _BIT1D,   _BIT1E,   _BIT1H,   _BIT1L,   _BIT1_HL, _BIT1A     ; 4
+    DQ _BIT2B,   _BIT2C,   _BIT2D,   _BIT2E,   _BIT2H,   _BIT2L,   _BIT2_HL, _BIT2A
+    DQ _BIT3B,   _BIT3C,   _BIT3D,   _BIT3E,   _BIT3H,   _BIT3L,   _BIT3_HL, _BIT3A     ; 5
+    DQ _BIT4B,   _BIT4C,   _BIT4D,   _BIT4E,   _BIT4H,   _BIT4L,   _BIT4_HL, _BIT4A
+    DQ _BIT5B,   _BIT5C,   _BIT5D,   _BIT5E,   _BIT5H,   _BIT5L,   _BIT5_HL, _BIT5A     ; 6
+    DQ _BIT6B,   _BIT6C,   _BIT6D,   _BIT6E,   _BIT6H,   _BIT6L,   _BIT6_HL, _BIT6A
+    DQ _BIT7B,   _BIT7C,   _BIT7D,   _BIT7E,   _BIT7H,   _BIT7L,   _BIT7_HL, _BIT7A     ; 7
+    DQ _RES0B,   _RES0C,   _RES0D,   _RES0E,   _RES0H,   _RES0L,   _RES0_HL, _RES0A
+    DQ _RES1B,   _RES1C,   _RES1D,   _RES1E,   _RES1H,   _RES1L,   _RES1_HL, _RES1A     ; 8
+    DQ _RES2B,   _RES2C,   _RES2D,   _RES2E,   _RES2H,   _RES2L,   _RES2_HL, _RES2A
+    DQ _RES3B,   _RES3C,   _RES3D,   _RES3E,   _RES3H,   _RES3L,   _RES3_HL, _RES3A     ; 9
+    DQ _RES4B,   _RES4C,   _RES4D,   _RES4E,   _RES4H,   _RES4L,   _RES4_HL, _RES4A
+    DQ _RES5B,   _RES5C,   _RES5D,   _RES5E,   _RES5H,   _RES5L,   _RES5_HL, _RES5A     ; A
+    DQ _RES6B,   _RES6C,   _RES6D,   _RES6E,   _RES6H,   _RES6L,   _RES6_HL, _RES6A
+    DQ _RES7B,   _RES7C,   _RES7D,   _RES7E,   _RES7H,   _RES7L,   _RES7_HL, _RES7A     ; B
+    DQ _SET0B,   _SET0C,   _SET0D,   _SET0E,   _SET0H,   _SET0L,   _SET0_HL, _SET0A
+    DQ _SET1B,   _SET1C,   _SET1D,   _SET1E,   _SET1H,   _SET1L,   _SET1_HL, _SET1A     ; C
+    DQ _SET2B,   _SET2C,   _SET2D,   _SET2E,   _SET2H,   _SET2L,   _SET2_HL, _SET2A
+    DQ _SET3B,   _SET3C,   _SET3D,   _SET3E,   _SET3H,   _SET3L,   _SET3_HL, _SET3A     ; D
+    DQ _SET4B,   _SET4C,   _SET4D,   _SET4E,   _SET4H,   _SET4L,   _SET4_HL, _SET4A
+    DQ _SET5B,   _SET5C,   _SET5D,   _SET5E,   _SET5H,   _SET5L,   _SET5_HL, _SET5A     ; E
+    DQ _SET6B,   _SET6C,   _SET6D,   _SET6E,   _SET6H,   _SET6L,   _SET6_HL, _SET6A
+    DQ _SET7B,   _SET7C,   _SET7D,   _SET7E,   _SET7H,   _SET7L,   _SET7_HL, _SET7A     ; F
 
 ; Opcode table (DD)
 GLOBAL OpcodeDD
 OpcodeDD:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DD _NOP,     _ADDIXBC, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 0
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DD _NOP,     _ADDIXDE, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 1
-    DD _NOP,     _LDIXN,   _LD_N_IX, _INCIX,   _INCIXH,  _DECIXH,  _LDIXHN,  _NOP
-    DD _NOP,     _ADDIXIX, _LDIX_N,  _DECIX,   _INCIXL,  _DECIXL,  _LDIXLN,  _NOP       ; 2
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _INC_IXd, _DEC_IXd, _LD_IXD_N,_NOP
-    DD _NOP,     _ADDIXSP, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 3
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDB_IXH, _LDB_IXL, _LDB_IXD, _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDC_IXH, _LDC_IXL, _LDC_IXD, _NOP       ; 4
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDD_IXH, _LDD_IXL, _LDD_IXD, _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDE_IXH, _LDE_IXL, _LDE_IXD, _NOP       ; 5
-    DD _LD_IXH_B,_LD_IXH_C,_LD_IXH_D,_LD_IXH_E,_LD_IXH_H,_LD_IXH_L,_LDH_IXD, _LD_IXH_A
-    DD _LD_IXL_B,_LD_IXL_C,_LD_IXL_D,_LD_IXL_E,_LD_IXL_H,_LD_IXL_L,_LDL_IXD, _LD_IXL_A  ; 6
-    DD _LD_IXD_B,_LD_IXD_C,_LD_IXD_D,_LD_IXD_E,_LD_IXD_H,_LD_IXD_L,_NOP,     _LD_IXD_A
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDA_IXH, _LDA_IXL, _LDA_IXD, _NOP       ; 7
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _ADDIXH,  _ADDIXL,  _ADDA_IXd,_NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _ADCA_IXd,_NOP       ; 8
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _SUBIXH,  _SUBIXL,  _SUB_IXd, _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _SBCA_IXd,_NOP       ; 9
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _ANDIXH,  _ANDIXL,  _AND_IXd, _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _XOR_IXd, _NOP       ; A
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _ORIXH,   _ORIXL,   _OR_IXd,  _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _CPIXH,   _CPIXL,   _CP_IXd,  _NOP       ; B
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DD _NOP,     _NOP,     _NOP,     _DDCB,    _NOP,     _NOP,     _NOP,     _NOP       ; C
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; D
-    DD _NOP,     _POPIX,   _NOP,     _EX_SP_IX,_NOP,     _PUSHIX,  _NOP,     _NOP
-    DD _NOP,     _JP_IX,   _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; E
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DD _NOP,     _LDSPIX,  _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; F
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DQ _NOP,     _ADDIXBC, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 0
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DQ _NOP,     _ADDIXDE, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 1
+    DQ _NOP,     _LDIXN,   _LD_N_IX, _INCIX,   _INCIXH,  _DECIXH,  _LDIXHN,  _NOP
+    DQ _NOP,     _ADDIXIX, _LDIX_N,  _DECIX,   _INCIXL,  _DECIXL,  _LDIXLN,  _NOP       ; 2
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _INC_IXd, _DEC_IXd, _LD_IXD_N,_NOP
+    DQ _NOP,     _ADDIXSP, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 3
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDB_IXH, _LDB_IXL, _LDB_IXD, _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDC_IXH, _LDC_IXL, _LDC_IXD, _NOP       ; 4
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDD_IXH, _LDD_IXL, _LDD_IXD, _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDE_IXH, _LDE_IXL, _LDE_IXD, _NOP       ; 5
+    DQ _LD_IXH_B,_LD_IXH_C,_LD_IXH_D,_LD_IXH_E,_LD_IXH_H,_LD_IXH_L,_LDH_IXD, _LD_IXH_A
+    DQ _LD_IXL_B,_LD_IXL_C,_LD_IXL_D,_LD_IXL_E,_LD_IXL_H,_LD_IXL_L,_LDL_IXD, _LD_IXL_A  ; 6
+    DQ _LD_IXD_B,_LD_IXD_C,_LD_IXD_D,_LD_IXD_E,_LD_IXD_H,_LD_IXD_L,_NOP,     _LD_IXD_A
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDA_IXH, _LDA_IXL, _LDA_IXD, _NOP       ; 7
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ADDIXH,  _ADDIXL,  _ADDA_IXd,_NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _ADCA_IXd,_NOP       ; 8
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _SUBIXH,  _SUBIXL,  _SUB_IXd, _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _SBCA_IXd,_NOP       ; 9
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ANDIXH,  _ANDIXL,  _AND_IXd, _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _XOR_IXd, _NOP       ; A
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ORIXH,   _ORIXL,   _OR_IXd,  _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _CPIXH,   _CPIXL,   _CP_IXd,  _NOP       ; B
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DQ _NOP,     _NOP,     _NOP,     _DDCB,    _NOP,     _NOP,     _NOP,     _NOP       ; C
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; D
+    DQ _NOP,     _POPIX,   _NOP,     _EX_SP_IX,_NOP,     _PUSHIX,  _NOP,     _NOP
+    DQ _NOP,     _JP_IX,   _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; E
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DQ _NOP,     _LDSPIX,  _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; F
 
 ; Opcode table (DD CB)
 GLOBAL OpcodeDDCB
 OpcodeDDCB:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RLC_IXd, _NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RRC_IXd, _NIMP3     ; 0
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RL_IXd,  _NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RR_IXd,  _NIMP3     ; 1
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SLA_IXd, _NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRA_IXd, _NIMP3     ; 2
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRL_IXd, _NIMP3     ; 3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT0_IXD,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT1_IXD,_NIMP3     ; 4
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT2_IXD,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT3_IXD,_NIMP3     ; 5
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT4_IXD,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT5_IXD,_NIMP3     ; 6
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT6_IXD,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT7_IXD,_NIMP3     ; 7
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES0_IXd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES1_IXd,_NIMP3     ; 8
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES2_IXd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES3_IXd,_NIMP3     ; 9
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES4_IXd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES5_IXd,_NIMP3     ; A
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES6_IXd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES7_IXd,_NIMP3     ; B
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET0_IXd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET1_IXd,_NIMP3     ; C
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET2_IXd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET3_IXd,_NIMP3     ; D
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET4_IXd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET5_IXd,_NIMP3     ; E
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET6_IXd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET7_IXd,_NIMP3     ; F
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RLC_IXd, _NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RRC_IXd, _NIMP3     ; 0
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RL_IXd,  _NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RR_IXd,  _NIMP3     ; 1
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SLA_IXd, _NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRA_IXd, _NIMP3     ; 2
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRL_IXd, _NIMP3     ; 3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT0_IXD,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT1_IXD,_NIMP3     ; 4
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT2_IXD,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT3_IXD,_NIMP3     ; 5
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT4_IXD,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT5_IXD,_NIMP3     ; 6
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT6_IXD,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT7_IXD,_NIMP3     ; 7
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES0_IXd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES1_IXd,_NIMP3     ; 8
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES2_IXd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES3_IXd,_NIMP3     ; 9
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES4_IXd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES5_IXd,_NIMP3     ; A
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES6_IXd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES7_IXd,_NIMP3     ; B
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET0_IXd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET1_IXd,_NIMP3     ; C
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET2_IXd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET3_IXd,_NIMP3     ; D
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET4_IXd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET5_IXd,_NIMP3     ; E
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET6_IXd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET7_IXd,_NIMP3     ; F
 
 ; Opcode table (ED)
 GLOBAL OpcodeED
 OpcodeED:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 0
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 1
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 2
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 3
-    DD _INB_C,   _OUT_C_B, _SBCHLBC, _LD_N_BC, _NEG,     _RETN,    _IM0,     _LDIA
-    DD _INC_C,   _OUT_C_C, _ADCHLBC, _LDBC_N,  _NIMP2,   _RETI,    _NIMP2,   _LDRA      ; 4
-    DD _IND_C,   _OUT_C_D, _SBCHLDE, _LD_N_DE, _NIMP2,   _NIMP2,   _IM1,     _LDAI
-    DD _INE_C,   _OUT_C_E, _ADCHLDE, _LDDE_N,  _NIMP2,   _NIMP2,   _IM2,     _LDAR      ; 5
-    DD _INH_C,   _OUT_C_H, _SBCHLHL, _LD_NN_HL,_NIMP2,   _NIMP2,   _NIMP2,   _RRD
-    DD _INL_C,   _OUT_C_L, _ADCHLHL, _LDHL_N,  _NIMP2,   _NIMP2,   _NIMP2,   _RLD       ; 6
-    DD _NIMP2,   _NIMP2,   _SBCHLSP, _LD_N_SP, _NIMP2,   _NIMP2,   _NIMP2,   _NIMP2
-    DD _INA_C,   _OUT_C_A, _ADCHLSP, _LDSP_N,  _NIMP2,   _NIMP2,   _NIMP2,   _NOLIST    ; 7
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 8
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 9
-    DD _LDI,     _CPI,     _INI,     _OUTI,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _LDD,     _CPD,     _NIMP2,   _OUTD,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; A
-    DD _LDIR,    _CPIR,    _INIR,    _OTIR,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _LDDR,    _CPDR,    _NIMP2,   _OTDR,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; B
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; C
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; D
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; E
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; F
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 0
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 1
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 2
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 3
+    DQ _INB_C,   _OUT_C_B, _SBCHLBC, _LD_N_BC, _NEG,     _RETN,    _IM0,     _LDIA
+    DQ _INC_C,   _OUT_C_C, _ADCHLBC, _LDBC_N,  _NIMP2,   _RETI,    _NIMP2,   _LDRA      ; 4
+    DQ _IND_C,   _OUT_C_D, _SBCHLDE, _LD_N_DE, _NIMP2,   _NIMP2,   _IM1,     _LDAI
+    DQ _INE_C,   _OUT_C_E, _ADCHLDE, _LDDE_N,  _NIMP2,   _NIMP2,   _IM2,     _LDAR      ; 5
+    DQ _INH_C,   _OUT_C_H, _SBCHLHL, _LD_NN_HL,_NIMP2,   _NIMP2,   _NIMP2,   _RRD
+    DQ _INL_C,   _OUT_C_L, _ADCHLHL, _LDHL_N,  _NIMP2,   _NIMP2,   _NIMP2,   _RLD       ; 6
+    DQ _NIMP2,   _NIMP2,   _SBCHLSP, _LD_N_SP, _NIMP2,   _NIMP2,   _NIMP2,   _NIMP2
+    DQ _INA_C,   _OUT_C_A, _ADCHLSP, _LDSP_N,  _NIMP2,   _NIMP2,   _NIMP2,   _NOLIST    ; 7
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 8
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 9
+    DQ _LDI,     _CPI,     _INI,     _OUTI,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _LDD,     _CPD,     _NIMP2,   _OUTD,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; A
+    DQ _LDIR,    _CPIR,    _INIR,    _OTIR,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _LDDR,    _CPDR,    _NIMP2,   _OTDR,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; B
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; C
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; D
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; E
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; F
 
 ; Opcode table (FD)
 GLOBAL OpcodeFD
 OpcodeFD:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DD _NOP,     _ADDIYBC, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 0
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DD _NOP,     _ADDIYDE, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 1
-    DD _NOP,     _LDIYN,   _LD_N_IY, _INCIY,   _INCIYH,  _DECIYH,  _LDIYHN,  _NOP
-    DD _NOP,     _ADDIYIY, _LDIY_N,  _DECIY,   _INCIYL,  _DECIYL,  _LDIYLN,  _NOP       ; 2
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _INC_IYd, _DEC_IYd, _LD_IYD_N,_NOP
-    DD _NOP,     _ADDIYSP, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 3
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDB_IYH, _LDB_IYL, _LDB_IYD, _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDC_IYH, _LDC_IYL, _LDC_IYD, _NOP       ; 4
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDD_IYH, _LDD_IYL, _LDD_IYD, _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDE_IYH, _LDE_IYL, _LDE_IYD, _NOP       ; 5
-    DD _LD_IYH_B,_LD_IYH_C,_LD_IYH_D,_LD_IYH_E,_LD_IYH_H,_LD_IYH_L,_LDH_IYD, _LD_IYH_A
-    DD _LD_IYL_B,_LD_IYL_C,_LD_IYL_D,_LD_IYL_E,_LD_IYL_H,_LD_IYL_L,_LDL_IYD, _LD_IYL_A  ; 6
-    DD _LD_IYD_B,_LD_IYD_C,_LD_IYD_D,_LD_IYD_E,_LD_IYD_H,_LD_IYD_L,_NIMP2,   _LD_IYD_A
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDA_IYH, _LDA_IYL, _LDA_IYD, _NOP       ; 7
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _ADDIYH,  _ADDIYL,  _ADDA_IYd,_NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _ADCA_IYd,_NOP       ; 8
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _SUBIYH,  _SUBIYL,  _SUB_IYd, _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _SBCA_IYd,_NOP       ; 9
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _ANDIYH,  _ANDIYL,  _AND_IYd, _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _XOR_IYd, _NOP       ; A
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _ORIYH,   _ORIYL,   _OR_IYd,  _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _CPIYH,   _CPIYL,   _CP_IYd,  _NOP       ; B
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DD _NOP,     _NOP,     _NOP,     _FDCB,    _NOP,     _NOP,     _NOP,     _NOP       ; C
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; D
-    DD _NOP,     _POPIY,   _NOP,     _EX_SP_IY,_NOP,     _PUSHIY,  _NOP,     _NOP
-    DD _NOP,     _JP_IY,   _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; E
-    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DD _NOP,     _LDSPIY,  _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; F
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DQ _NOP,     _ADDIYBC, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 0
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DQ _NOP,     _ADDIYDE, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 1
+    DQ _NOP,     _LDIYN,   _LD_N_IY, _INCIY,   _INCIYH,  _DECIYH,  _LDIYHN,  _NOP
+    DQ _NOP,     _ADDIYIY, _LDIY_N,  _DECIY,   _INCIYL,  _DECIYL,  _LDIYLN,  _NOP       ; 2
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _INC_IYd, _DEC_IYd, _LD_IYD_N,_NOP
+    DQ _NOP,     _ADDIYSP, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 3
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDB_IYH, _LDB_IYL, _LDB_IYD, _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDC_IYH, _LDC_IYL, _LDC_IYD, _NOP       ; 4
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDD_IYH, _LDD_IYL, _LDD_IYD, _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDE_IYH, _LDE_IYL, _LDE_IYD, _NOP       ; 5
+    DQ _LD_IYH_B,_LD_IYH_C,_LD_IYH_D,_LD_IYH_E,_LD_IYH_H,_LD_IYH_L,_LDH_IYD, _LD_IYH_A
+    DQ _LD_IYL_B,_LD_IYL_C,_LD_IYL_D,_LD_IYL_E,_LD_IYL_H,_LD_IYL_L,_LDL_IYD, _LD_IYL_A  ; 6
+    DQ _LD_IYD_B,_LD_IYD_C,_LD_IYD_D,_LD_IYD_E,_LD_IYD_H,_LD_IYD_L,_NIMP2,   _LD_IYD_A
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDA_IYH, _LDA_IYL, _LDA_IYD, _NOP       ; 7
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ADDIYH,  _ADDIYL,  _ADDA_IYd,_NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _ADCA_IYd,_NOP       ; 8
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _SUBIYH,  _SUBIYL,  _SUB_IYd, _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _SBCA_IYd,_NOP       ; 9
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ANDIYH,  _ANDIYL,  _AND_IYd, _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _XOR_IYd, _NOP       ; A
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ORIYH,   _ORIYL,   _OR_IYd,  _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _CPIYH,   _CPIYL,   _CP_IYd,  _NOP       ; B
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DQ _NOP,     _NOP,     _NOP,     _FDCB,    _NOP,     _NOP,     _NOP,     _NOP       ; C
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; D
+    DQ _NOP,     _POPIY,   _NOP,     _EX_SP_IY,_NOP,     _PUSHIY,  _NOP,     _NOP
+    DQ _NOP,     _JP_IY,   _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; E
+    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DQ _NOP,     _LDSPIY,  _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; F
 
 ; Opcode table (FD CB)
 GLOBAL OpcodeFDCB
 OpcodeFDCB:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RLC_IYd, _NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RRC_IYd, _NIMP3     ; 0
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RL_IYd,  _NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RR_IYd,  _NIMP3     ; 1
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SLA_IYd, _NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRA_IYd, _NIMP3     ; 2
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRL_IYd, _NIMP3     ; 3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT0_IYD,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT1_IYD,_NIMP3     ; 4
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT2_IYD,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT3_IYD,_NIMP3     ; 5
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT4_IYD,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT5_IYD,_NIMP3     ; 6
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT6_IYD,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT7_IYD,_NIMP3     ; 7
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES0_IYd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES1_IYd,_NIMP3     ; 8
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES2_IYd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES3_IYd,_NIMP3     ; 9
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES4_IYd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES5_IYd,_NIMP3     ; A
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES6_IYd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES7_IYd,_NIMP3     ; B
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET0_IYd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET1_IYd,_NIMP3     ; C
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET2_IYd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET3_IYd,_NIMP3     ; D
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET4_IYd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET5_IYd,_NIMP3     ; E
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET6_IYd,_NIMP3
-    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET7_IYd,_NIMP3     ; F
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RLC_IYd, _NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RRC_IYd, _NIMP3     ; 0
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RL_IYd,  _NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RR_IYd,  _NIMP3     ; 1
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SLA_IYd, _NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRA_IYd, _NIMP3     ; 2
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRL_IYd, _NIMP3     ; 3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT0_IYD,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT1_IYD,_NIMP3     ; 4
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT2_IYD,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT3_IYD,_NIMP3     ; 5
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT4_IYD,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT5_IYD,_NIMP3     ; 6
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT6_IYD,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT7_IYD,_NIMP3     ; 7
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES0_IYd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES1_IYd,_NIMP3     ; 8
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES2_IYd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES3_IYd,_NIMP3     ; 9
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES4_IYd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES5_IYd,_NIMP3     ; A
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES6_IYd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES7_IYd,_NIMP3     ; B
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET0_IYd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET1_IYd,_NIMP3     ; C
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET2_IYd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET3_IYd,_NIMP3     ; D
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET4_IYd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET5_IYd,_NIMP3     ; E
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET6_IYd,_NIMP3
+    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET7_IYd,_NIMP3     ; F
