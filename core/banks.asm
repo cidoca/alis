@@ -15,7 +15,6 @@
 ; along with this program.  If not, see [http://www.gnu.org/licenses/].
 
 
-EXTERN init_battery
 %INCLUDE "data.inc"
 
 SECTION .text

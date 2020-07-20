@@ -212,74 +212,74 @@ SECTION .data
 GLOBAL read_io
 read_io:
 ;       0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DQ Empty,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 0
-    DQ Empty,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 1
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 2
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 3
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 4
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 5
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 6
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   VCounter, HCounter   ; 7
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 8
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 9
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; A
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   RVDPD,    _RVDPS     ; B
-    DQ RJoy1,    RJoy2,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; C
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   RJoy1,    RJoy2,    Unknown,  Unknown    ; D
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; E
-    DQ _NRIMP,   _NRIMP,   YMCRR,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
-    DQ _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; F
+    DD Empty,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 0
+    DD Empty,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 1
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 2
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 3
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 4
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 5
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 6
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   VCounter, HCounter   ; 7
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 8
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; 9
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; A
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   RVDPD,    _RVDPS     ; B
+    DD RJoy1,    RJoy2,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; C
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   RJoy1,    RJoy2,    Unknown,  Unknown    ; D
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; E
+    DD _NRIMP,   _NRIMP,   YMCRR,    _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP
+    DD _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP,   _NRIMP     ; F
 
 GLOBAL write_io
 write_io:
 ;       0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DQ MemCtrl,  _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 0
-    DQ _NWIMP,   AutNat,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ MemCtrl,  _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 1
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 2
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   MemCtrl,  AutNat     ; 3
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 4
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 5
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 6
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   write_PSG,write_PSG  ; 7
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 8
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 9
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; A
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   WVDPA,    WVDPD,    WVDPA      ; B
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; C
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; D
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; E
-    DQ YMAR,     YMDR,     YMCRW,    _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
-    DQ _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; F
+    DD MemCtrl,  _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 0
+    DD _NWIMP,   AutNat,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD MemCtrl,  _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 1
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 2
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   MemCtrl,  AutNat     ; 3
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 4
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 5
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 6
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   write_PSG,write_PSG  ; 7
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 8
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; 9
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; A
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   WVDPA,    WVDPD,    WVDPA      ; B
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; C
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; D
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; E
+    DD YMAR,     YMDR,     YMCRW,    _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP
+    DD _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP,   _NWIMP     ; F
 
 
 SECTION .bss

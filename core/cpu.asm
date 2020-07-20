@@ -54,7 +54,8 @@ TraceLine:
         mov esi, [rPCx]
         call read_mem
         movzx edx, BYTE [rsi]
-        jmp QWORD [Opcode+edx*8]
+        mov edx, [Opcode+edx*4]
+        jmp rdx
 
 TLF:    cmp BYTE [TClock], 228
         jb TraceLine
@@ -1239,7 +1240,8 @@ GLOBAL _CB
 _CB:
         inc BYTE [rR]
         movzx edx, BYTE [rsi+1]
-        jmp QWORD [OpcodeCB+edx*8]
+        mov edx, [OpcodeCB+edx*4]
+        jmp rdx
 
 ; * CALL n - CD n n - 17 Clk - Call subroutine
 ; **********************************************
@@ -1262,7 +1264,8 @@ GLOBAL _OUTNA
 _OUTNA:
         mov al, BYTE [rAcc]
         movzx edx, BYTE [rsi+1]
-        call QWORD [write_io+edx*8]
+        mov edx, [write_io+edx*4]
+        call rdx
         add DWORD [rPCx], 2
         add BYTE [TClock], 11
         jmp TLF
@@ -1284,14 +1287,16 @@ GLOBAL _DD
 _DD:
         inc BYTE [rR]
         movzx edx, BYTE [rsi+1]
-        jmp QWORD [OpcodeDD+edx*8]
+        mov edx, [OpcodeDD+edx*4]
+        jmp rdx
 
 ; * IN A, (n) - DB n - 11 Clk - Load the accumulator with input from device n
 ; *****************************************************************************
 GLOBAL _INA_N
 _INA_N:
         movzx edx, BYTE [rsi+1]
-        call QWORD [read_io+edx*8]
+        mov edx, [read_io+edx*4]
+        call rdx
         mov BYTE [rAcc], al
         add DWORD [rPCx], 2
         add BYTE [TClock], 11
@@ -1330,7 +1335,8 @@ GLOBAL _ED
 _ED:
         inc BYTE [rR]
         movzx edx, BYTE [rsi+1]
-        jmp QWORD [OpcodeED+edx*8]
+        mov edx, [OpcodeED+edx*4]
+        jmp rdx
 
 ; * DI - F3 - 4 Clk - Disable interrupts
 ; ****************************************
@@ -1367,7 +1373,8 @@ GLOBAL _FD
 _FD:
         inc BYTE [rR]
         movzx edx, BYTE [rsi+1]
-        jmp QWORD [OpcodeFD+edx*8]
+        mov edx, [OpcodeFD+edx*4]
+        jmp rdx
 
 
 ; ***************************************************************************************
@@ -1441,7 +1448,8 @@ _FD:
 %MACRO __OUT_C_r 1
         mov al, %1
         movzx edx, BYTE [rC]
-        call QWORD [write_io+edx*8]
+        mov edx, [write_io+edx*4]
+        call rdx
         add DWORD [rPCx], 2
         add BYTE [TClock], 12
         jmp TLF
@@ -1660,7 +1668,8 @@ _FD:
 %MACRO __INr_C 1
         and BYTE [Flag], 1
         movzx edx, BYTE [rC]
-        call QWORD [read_io+edx*8]
+        mov edx, [read_io+edx*4]
+        call rdx
         mov %1, al
         or al, al
         lahf
@@ -2546,7 +2555,8 @@ GLOBAL _DDCB
 _DDCB:
 ;       inc BYTE [rR]
         movzx edx, BYTE [rsi+3]
-        jmp QWORD [OpcodeDDCB+edx*8]
+        mov edx, [OpcodeDDCB+edx*4]
+        jmp rdx
 
 ; * POP IX - DD E1 - 14 Clk - Load IX with top of stack
 ; *******************************************************
@@ -2971,7 +2981,8 @@ _INI:
         and BYTE [Flag], 1
         or BYTE [Flag], 2
         movzx edx, BYTE [rC]
-        call QWORD [read_io+edx*8]
+        mov edx, [read_io+edx*4]
+        call rdx
         movzx esi, WORD [rL]
         call write_mem
         mov [rsi], al
@@ -2992,7 +3003,8 @@ _OUTI:
         call read_mem
         mov al, [rsi]
         movzx edx, BYTE [rC]
-        call QWORD [write_io+edx*8]
+        mov edx, [write_io+edx*4]
+        call rdx
         dec BYTE [rB]
         lahf
         and ah, 0C0h
@@ -3051,7 +3063,8 @@ _OUTD:
         call read_mem
         mov al, [rsi]
         movzx edx, BYTE [rC]
-        call QWORD [write_io+edx*8]
+        mov edx, [write_io+edx*4]
+        call rdx
         dec BYTE [rB]
         lahf
         and ah, 0C0h
@@ -3114,7 +3127,8 @@ _INIR:
         and BYTE [Flag], 1
         or BYTE [Flag], 42h
         movzx edx, BYTE [rC]
-        call QWORD [read_io+edx*8]
+        mov edx, [read_io+edx*4]
+        call rdx
         movzx esi, WORD [rL]
         inc WORD [rL]
         call write_mem
@@ -3138,7 +3152,8 @@ _OTIR:
         call read_mem
         mov al, [rsi]
         movzx edx, BYTE [rC]
-        call QWORD [write_io+edx*8]
+        mov edx, [write_io+edx*4]
+        call rdx
         dec BYTE [rB]
         jz OTIR0
         add BYTE [TClock], 21
@@ -3204,7 +3219,8 @@ _OTDR:
         call read_mem
         mov al, [rsi]
         movzx edx, BYTE [rC]
-        call QWORD [write_io+edx*8]
+        mov edx, [write_io+edx*4]
+        call rdx
         dec BYTE [rB]
         jz OTDR0
         add BYTE [TClock], 21
@@ -3561,7 +3577,8 @@ GLOBAL _FDCB
 _FDCB:
 ;       inc BYTE [rR]
         movzx edx, BYTE [rsi+3]
-        jmp QWORD [OpcodeFDCB+edx*8]
+        mov edx, [OpcodeFDCB+edx*4]
+        jmp rdx
 
 ; * POP IY - FD E1 - 14 Clk - Load IY with top of stack
 ; *******************************************************
@@ -3733,257 +3750,257 @@ SECTION .data
 GLOBAL Opcode
 Opcode:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DQ _NOP,     _LDBCN,   _LD_BC_A, _INCBC,   _INCB,    _DECB,    _LDBN,    _RLCA
-    DQ _EXAFAF,  _ADDHLBC, _LDA_BC,  _DECBC,   _INCC,    _DECC,    _LDCN,    _RRCA      ; 0
-    DQ _DJNZ,    _LDDEN,   _LD_DE_A, _INCDE,   _INCD,    _DECD,    _LDDN,    _RLA
-    DQ _JRE,     _ADDHLDE, _LDA_DE,  _DECDE,   _INCE,    _DECE,    _LDEN,    _RRA       ; 1
-    DQ _JRNZE,   _LDHLN,   _LD_N_HL, _INCHL,   _INCH,    _DECH,    _LDHN,    _DAA
-    DQ _JRZE,    _ADDHLHL, _LDHL_N2, _DECHL,   _INCL,    _DECL,    _LDLN,    __CPL      ; 2
-    DQ _JRNCE,   _LDSPN,   _LD_N_A,  _INCSP,   _INC_HL,  _DEC_HL,  _LD_HL_N, _SCF
-    DQ _JRCE,    _ADDHLSP, _LDA_N,   _DECSP,   _INCA,    _DECA,    _LDAN,    _CCF       ; 3
-    DQ _LDBB,    _LDBC,    _LDBD,    _LDBE,    _LDBH,    _LDBL,    _LDB_HL,  _LDBA
-    DQ _LDCB,    _LDCC,    _LDCD,    _LDCE,    _LDCH,    _LDCL,    _LDC_HL,  _LDCA      ; 4
-    DQ _LDDB,    _LDDC,    _LDDD,    _LDDE,    _LDDH,    _LDDL,    _LDD_HL,  _LDDA
-    DQ _LDEB,    _LDEC,    _LDED,    _LDEE,    _LDEH,    _LDEL,    _LDE_HL,  _LDEA      ; 5
-    DQ _LDHB,    _LDHC,    _LDHD,    _LDHE,    _LDHH,    _LDHL,    _LDH_HL,  _LDHA
-    DQ _LDLB,    _LDLC,    _LDLD,    _LDLE,    _LDLH,    _LDLL,    _LDL_HL,  _LDLA      ; 6
-    DQ _LD_HL_B, _LD_HL_C, _LD_HL_D, _LD_HL_E, _LD_HL_H, _LD_HL_L, _HALT,    _LD_HL_A
-    DQ _LDAB,    _LDAC,    _LDAD,    _LDAE,    _LDAH,    _LDAL,    _LDA_HL,  _LDAA      ; 7
-    DQ _ADDAB,   _ADDAC,   _ADDAD,   _ADDAE,   _ADDAH,   _ADDAL,   _ADDA_HL, _ADDAA
-    DQ _ADCAB,   _ADCAC,   _ADCAD,   _ADCAE,   _ADCAH,   _ADCAL,   _ADCA_HL, _ADCAA     ; 8
-    DQ _SUBB,    _SUBC,    _SUBD,    _SUBE,    _SUBH,    _SUBL,    _SUB_HL,  _SUBA
-    DQ _SBCAB,   _SBCAC,   _SBCAD,   _SBCAE,   _SBCAH,   _SBCAL,   _SBCA_HL, _SBCAA     ; 9
-    DQ _ANDB,    _ANDC,    _ANDD,    _ANDE,    _ANDH,    _ANDL,    _AND_HL,  _ANDA
-    DQ _XORB,    _XORC,    _XORD,    _XORE,    _XORH,    _XORL,    _XOR_HL,  _XORA      ; A
-    DQ _ORB,     _ORC,     _ORD,     _ORE,     _ORH,     _ORL,     _OR_HL,   _ORA
-    DQ _CPB,     _CPC,     _CPD2,    _CPE,     _CPH,     _CPL,     _CP_HL,   _CPA       ; B
-    DQ _RETNZ,   _POPBC,   _JPNZN,   _JPN,     _CALLNZN, _PUSHBC,  _ADDAN,   _RST0
-    DQ _RETZ,    _RET,     _JPZN,    _CB,      _CALLZN,  _CALLN,   _ADCAN,   _RST8      ; C
-    DQ _RETNC,   _POPDE,   _JPNCN,   _OUTNA,   _CALLNCN, _PUSHDE,  _SUBN,    _RST10
-    DQ _RETC,    _EXX,     _JPCN,    _INA_N,   _CALLCN,  _DD,      _SBCAN,   _RST18     ; D
-    DQ _RETPO,   _POPHL,   _JPPON,   _EX_SP_HL,_CALLPON, _PUSHHL,  _ANDN,    _RST20
-    DQ _RETPE,   _JP_HL,   _JPPEN,   _EXDEHL,  _CALLPEN, _ED,      _XORN,    _RST28     ; E
-    DQ _RETP,    _POPAF,   _JPPN,    _DI,      _CALLPN,  _PUSHAF,  _ORN,     _RST30
-    DQ _RETM,    _LDSPHL,  _JPMN,    _EI,      _CALLMN,  _FD,      _CPN,     _RST38     ; F
+    DD _NOP,     _LDBCN,   _LD_BC_A, _INCBC,   _INCB,    _DECB,    _LDBN,    _RLCA
+    DD _EXAFAF,  _ADDHLBC, _LDA_BC,  _DECBC,   _INCC,    _DECC,    _LDCN,    _RRCA      ; 0
+    DD _DJNZ,    _LDDEN,   _LD_DE_A, _INCDE,   _INCD,    _DECD,    _LDDN,    _RLA
+    DD _JRE,     _ADDHLDE, _LDA_DE,  _DECDE,   _INCE,    _DECE,    _LDEN,    _RRA       ; 1
+    DD _JRNZE,   _LDHLN,   _LD_N_HL, _INCHL,   _INCH,    _DECH,    _LDHN,    _DAA
+    DD _JRZE,    _ADDHLHL, _LDHL_N2, _DECHL,   _INCL,    _DECL,    _LDLN,    __CPL      ; 2
+    DD _JRNCE,   _LDSPN,   _LD_N_A,  _INCSP,   _INC_HL,  _DEC_HL,  _LD_HL_N, _SCF
+    DD _JRCE,    _ADDHLSP, _LDA_N,   _DECSP,   _INCA,    _DECA,    _LDAN,    _CCF       ; 3
+    DD _LDBB,    _LDBC,    _LDBD,    _LDBE,    _LDBH,    _LDBL,    _LDB_HL,  _LDBA
+    DD _LDCB,    _LDCC,    _LDCD,    _LDCE,    _LDCH,    _LDCL,    _LDC_HL,  _LDCA      ; 4
+    DD _LDDB,    _LDDC,    _LDDD,    _LDDE,    _LDDH,    _LDDL,    _LDD_HL,  _LDDA
+    DD _LDEB,    _LDEC,    _LDED,    _LDEE,    _LDEH,    _LDEL,    _LDE_HL,  _LDEA      ; 5
+    DD _LDHB,    _LDHC,    _LDHD,    _LDHE,    _LDHH,    _LDHL,    _LDH_HL,  _LDHA
+    DD _LDLB,    _LDLC,    _LDLD,    _LDLE,    _LDLH,    _LDLL,    _LDL_HL,  _LDLA      ; 6
+    DD _LD_HL_B, _LD_HL_C, _LD_HL_D, _LD_HL_E, _LD_HL_H, _LD_HL_L, _HALT,    _LD_HL_A
+    DD _LDAB,    _LDAC,    _LDAD,    _LDAE,    _LDAH,    _LDAL,    _LDA_HL,  _LDAA      ; 7
+    DD _ADDAB,   _ADDAC,   _ADDAD,   _ADDAE,   _ADDAH,   _ADDAL,   _ADDA_HL, _ADDAA
+    DD _ADCAB,   _ADCAC,   _ADCAD,   _ADCAE,   _ADCAH,   _ADCAL,   _ADCA_HL, _ADCAA     ; 8
+    DD _SUBB,    _SUBC,    _SUBD,    _SUBE,    _SUBH,    _SUBL,    _SUB_HL,  _SUBA
+    DD _SBCAB,   _SBCAC,   _SBCAD,   _SBCAE,   _SBCAH,   _SBCAL,   _SBCA_HL, _SBCAA     ; 9
+    DD _ANDB,    _ANDC,    _ANDD,    _ANDE,    _ANDH,    _ANDL,    _AND_HL,  _ANDA
+    DD _XORB,    _XORC,    _XORD,    _XORE,    _XORH,    _XORL,    _XOR_HL,  _XORA      ; A
+    DD _ORB,     _ORC,     _ORD,     _ORE,     _ORH,     _ORL,     _OR_HL,   _ORA
+    DD _CPB,     _CPC,     _CPD2,    _CPE,     _CPH,     _CPL,     _CP_HL,   _CPA       ; B
+    DD _RETNZ,   _POPBC,   _JPNZN,   _JPN,     _CALLNZN, _PUSHBC,  _ADDAN,   _RST0
+    DD _RETZ,    _RET,     _JPZN,    _CB,      _CALLZN,  _CALLN,   _ADCAN,   _RST8      ; C
+    DD _RETNC,   _POPDE,   _JPNCN,   _OUTNA,   _CALLNCN, _PUSHDE,  _SUBN,    _RST10
+    DD _RETC,    _EXX,     _JPCN,    _INA_N,   _CALLCN,  _DD,      _SBCAN,   _RST18     ; D
+    DD _RETPO,   _POPHL,   _JPPON,   _EX_SP_HL,_CALLPON, _PUSHHL,  _ANDN,    _RST20
+    DD _RETPE,   _JP_HL,   _JPPEN,   _EXDEHL,  _CALLPEN, _ED,      _XORN,    _RST28     ; E
+    DD _RETP,    _POPAF,   _JPPN,    _DI,      _CALLPN,  _PUSHAF,  _ORN,     _RST30
+    DD _RETM,    _LDSPHL,  _JPMN,    _EI,      _CALLMN,  _FD,      _CPN,     _RST38     ; F
 
 ; Opcode table  (CB)
 GLOBAL OpcodeCB
 OpcodeCB:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DQ _RLCB,    _RLCC,    _RLCD,    _RLCE,    _RLCH,    _RLCL,    _RLC_HL,  _RLCA2
-    DQ _RRCB,    _RRCC,    _RRCD,    _RRCE,    _RRCH,    _RRCL,    _RRC_HL,  _RRCA2     ; 0
-    DQ _RLB,     _RLC,     _RLD2,    _RLE,     _RLH,     _RLL,     _RL_HL,   _RLA2
-    DQ _RRB,     _RRC,     _RRD2,    _RRE,     _RRH,     _RRL,     _RR_HL,   _RRA2      ; 1
-    DQ _SLAB,    _SLAC,    _SLAD,    _SLAE,    _SLAH,    _SLAL,    _SLA_HL,  _SLAA
-    DQ _SRAB,    _SRAC,    _SRAD,    _SRAE,    _SRAH,    _SRAL,    _SRA_HL,  _SRAA      ; 2
-    DQ _SLLB,    _SLLC,    _SLLD,    _SLLE,    _SLLH,    _SLLL,    _SLL_HL,  _SLLA
-    DQ _SRLB,    _SRLC,    _SRLD,    _SRLE,    _SRLH,    _SRLL,    _SRL_HL,  _SRLA      ; 3
-    DQ _BIT0B,   _BIT0C,   _BIT0D,   _BIT0E,   _BIT0H,   _BIT0L,   _BIT0_HL, _BIT0A
-    DQ _BIT1B,   _BIT1C,   _BIT1D,   _BIT1E,   _BIT1H,   _BIT1L,   _BIT1_HL, _BIT1A     ; 4
-    DQ _BIT2B,   _BIT2C,   _BIT2D,   _BIT2E,   _BIT2H,   _BIT2L,   _BIT2_HL, _BIT2A
-    DQ _BIT3B,   _BIT3C,   _BIT3D,   _BIT3E,   _BIT3H,   _BIT3L,   _BIT3_HL, _BIT3A     ; 5
-    DQ _BIT4B,   _BIT4C,   _BIT4D,   _BIT4E,   _BIT4H,   _BIT4L,   _BIT4_HL, _BIT4A
-    DQ _BIT5B,   _BIT5C,   _BIT5D,   _BIT5E,   _BIT5H,   _BIT5L,   _BIT5_HL, _BIT5A     ; 6
-    DQ _BIT6B,   _BIT6C,   _BIT6D,   _BIT6E,   _BIT6H,   _BIT6L,   _BIT6_HL, _BIT6A
-    DQ _BIT7B,   _BIT7C,   _BIT7D,   _BIT7E,   _BIT7H,   _BIT7L,   _BIT7_HL, _BIT7A     ; 7
-    DQ _RES0B,   _RES0C,   _RES0D,   _RES0E,   _RES0H,   _RES0L,   _RES0_HL, _RES0A
-    DQ _RES1B,   _RES1C,   _RES1D,   _RES1E,   _RES1H,   _RES1L,   _RES1_HL, _RES1A     ; 8
-    DQ _RES2B,   _RES2C,   _RES2D,   _RES2E,   _RES2H,   _RES2L,   _RES2_HL, _RES2A
-    DQ _RES3B,   _RES3C,   _RES3D,   _RES3E,   _RES3H,   _RES3L,   _RES3_HL, _RES3A     ; 9
-    DQ _RES4B,   _RES4C,   _RES4D,   _RES4E,   _RES4H,   _RES4L,   _RES4_HL, _RES4A
-    DQ _RES5B,   _RES5C,   _RES5D,   _RES5E,   _RES5H,   _RES5L,   _RES5_HL, _RES5A     ; A
-    DQ _RES6B,   _RES6C,   _RES6D,   _RES6E,   _RES6H,   _RES6L,   _RES6_HL, _RES6A
-    DQ _RES7B,   _RES7C,   _RES7D,   _RES7E,   _RES7H,   _RES7L,   _RES7_HL, _RES7A     ; B
-    DQ _SET0B,   _SET0C,   _SET0D,   _SET0E,   _SET0H,   _SET0L,   _SET0_HL, _SET0A
-    DQ _SET1B,   _SET1C,   _SET1D,   _SET1E,   _SET1H,   _SET1L,   _SET1_HL, _SET1A     ; C
-    DQ _SET2B,   _SET2C,   _SET2D,   _SET2E,   _SET2H,   _SET2L,   _SET2_HL, _SET2A
-    DQ _SET3B,   _SET3C,   _SET3D,   _SET3E,   _SET3H,   _SET3L,   _SET3_HL, _SET3A     ; D
-    DQ _SET4B,   _SET4C,   _SET4D,   _SET4E,   _SET4H,   _SET4L,   _SET4_HL, _SET4A
-    DQ _SET5B,   _SET5C,   _SET5D,   _SET5E,   _SET5H,   _SET5L,   _SET5_HL, _SET5A     ; E
-    DQ _SET6B,   _SET6C,   _SET6D,   _SET6E,   _SET6H,   _SET6L,   _SET6_HL, _SET6A
-    DQ _SET7B,   _SET7C,   _SET7D,   _SET7E,   _SET7H,   _SET7L,   _SET7_HL, _SET7A     ; F
+    DD _RLCB,    _RLCC,    _RLCD,    _RLCE,    _RLCH,    _RLCL,    _RLC_HL,  _RLCA2
+    DD _RRCB,    _RRCC,    _RRCD,    _RRCE,    _RRCH,    _RRCL,    _RRC_HL,  _RRCA2     ; 0
+    DD _RLB,     _RLC,     _RLD2,    _RLE,     _RLH,     _RLL,     _RL_HL,   _RLA2
+    DD _RRB,     _RRC,     _RRD2,    _RRE,     _RRH,     _RRL,     _RR_HL,   _RRA2      ; 1
+    DD _SLAB,    _SLAC,    _SLAD,    _SLAE,    _SLAH,    _SLAL,    _SLA_HL,  _SLAA
+    DD _SRAB,    _SRAC,    _SRAD,    _SRAE,    _SRAH,    _SRAL,    _SRA_HL,  _SRAA      ; 2
+    DD _SLLB,    _SLLC,    _SLLD,    _SLLE,    _SLLH,    _SLLL,    _SLL_HL,  _SLLA
+    DD _SRLB,    _SRLC,    _SRLD,    _SRLE,    _SRLH,    _SRLL,    _SRL_HL,  _SRLA      ; 3
+    DD _BIT0B,   _BIT0C,   _BIT0D,   _BIT0E,   _BIT0H,   _BIT0L,   _BIT0_HL, _BIT0A
+    DD _BIT1B,   _BIT1C,   _BIT1D,   _BIT1E,   _BIT1H,   _BIT1L,   _BIT1_HL, _BIT1A     ; 4
+    DD _BIT2B,   _BIT2C,   _BIT2D,   _BIT2E,   _BIT2H,   _BIT2L,   _BIT2_HL, _BIT2A
+    DD _BIT3B,   _BIT3C,   _BIT3D,   _BIT3E,   _BIT3H,   _BIT3L,   _BIT3_HL, _BIT3A     ; 5
+    DD _BIT4B,   _BIT4C,   _BIT4D,   _BIT4E,   _BIT4H,   _BIT4L,   _BIT4_HL, _BIT4A
+    DD _BIT5B,   _BIT5C,   _BIT5D,   _BIT5E,   _BIT5H,   _BIT5L,   _BIT5_HL, _BIT5A     ; 6
+    DD _BIT6B,   _BIT6C,   _BIT6D,   _BIT6E,   _BIT6H,   _BIT6L,   _BIT6_HL, _BIT6A
+    DD _BIT7B,   _BIT7C,   _BIT7D,   _BIT7E,   _BIT7H,   _BIT7L,   _BIT7_HL, _BIT7A     ; 7
+    DD _RES0B,   _RES0C,   _RES0D,   _RES0E,   _RES0H,   _RES0L,   _RES0_HL, _RES0A
+    DD _RES1B,   _RES1C,   _RES1D,   _RES1E,   _RES1H,   _RES1L,   _RES1_HL, _RES1A     ; 8
+    DD _RES2B,   _RES2C,   _RES2D,   _RES2E,   _RES2H,   _RES2L,   _RES2_HL, _RES2A
+    DD _RES3B,   _RES3C,   _RES3D,   _RES3E,   _RES3H,   _RES3L,   _RES3_HL, _RES3A     ; 9
+    DD _RES4B,   _RES4C,   _RES4D,   _RES4E,   _RES4H,   _RES4L,   _RES4_HL, _RES4A
+    DD _RES5B,   _RES5C,   _RES5D,   _RES5E,   _RES5H,   _RES5L,   _RES5_HL, _RES5A     ; A
+    DD _RES6B,   _RES6C,   _RES6D,   _RES6E,   _RES6H,   _RES6L,   _RES6_HL, _RES6A
+    DD _RES7B,   _RES7C,   _RES7D,   _RES7E,   _RES7H,   _RES7L,   _RES7_HL, _RES7A     ; B
+    DD _SET0B,   _SET0C,   _SET0D,   _SET0E,   _SET0H,   _SET0L,   _SET0_HL, _SET0A
+    DD _SET1B,   _SET1C,   _SET1D,   _SET1E,   _SET1H,   _SET1L,   _SET1_HL, _SET1A     ; C
+    DD _SET2B,   _SET2C,   _SET2D,   _SET2E,   _SET2H,   _SET2L,   _SET2_HL, _SET2A
+    DD _SET3B,   _SET3C,   _SET3D,   _SET3E,   _SET3H,   _SET3L,   _SET3_HL, _SET3A     ; D
+    DD _SET4B,   _SET4C,   _SET4D,   _SET4E,   _SET4H,   _SET4L,   _SET4_HL, _SET4A
+    DD _SET5B,   _SET5C,   _SET5D,   _SET5E,   _SET5H,   _SET5L,   _SET5_HL, _SET5A     ; E
+    DD _SET6B,   _SET6C,   _SET6D,   _SET6E,   _SET6H,   _SET6L,   _SET6_HL, _SET6A
+    DD _SET7B,   _SET7C,   _SET7D,   _SET7E,   _SET7H,   _SET7L,   _SET7_HL, _SET7A     ; F
 
 ; Opcode table (DD)
 GLOBAL OpcodeDD
 OpcodeDD:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DQ _NOP,     _ADDIXBC, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 0
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DQ _NOP,     _ADDIXDE, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 1
-    DQ _NOP,     _LDIXN,   _LD_N_IX, _INCIX,   _INCIXH,  _DECIXH,  _LDIXHN,  _NOP
-    DQ _NOP,     _ADDIXIX, _LDIX_N,  _DECIX,   _INCIXL,  _DECIXL,  _LDIXLN,  _NOP       ; 2
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _INC_IXd, _DEC_IXd, _LD_IXD_N,_NOP
-    DQ _NOP,     _ADDIXSP, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 3
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDB_IXH, _LDB_IXL, _LDB_IXD, _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDC_IXH, _LDC_IXL, _LDC_IXD, _NOP       ; 4
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDD_IXH, _LDD_IXL, _LDD_IXD, _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDE_IXH, _LDE_IXL, _LDE_IXD, _NOP       ; 5
-    DQ _LD_IXH_B,_LD_IXH_C,_LD_IXH_D,_LD_IXH_E,_LD_IXH_H,_LD_IXH_L,_LDH_IXD, _LD_IXH_A
-    DQ _LD_IXL_B,_LD_IXL_C,_LD_IXL_D,_LD_IXL_E,_LD_IXL_H,_LD_IXL_L,_LDL_IXD, _LD_IXL_A  ; 6
-    DQ _LD_IXD_B,_LD_IXD_C,_LD_IXD_D,_LD_IXD_E,_LD_IXD_H,_LD_IXD_L,_NOP,     _LD_IXD_A
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDA_IXH, _LDA_IXL, _LDA_IXD, _NOP       ; 7
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ADDIXH,  _ADDIXL,  _ADDA_IXd,_NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _ADCA_IXd,_NOP       ; 8
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _SUBIXH,  _SUBIXL,  _SUB_IXd, _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _SBCA_IXd,_NOP       ; 9
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ANDIXH,  _ANDIXL,  _AND_IXd, _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _XOR_IXd, _NOP       ; A
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ORIXH,   _ORIXL,   _OR_IXd,  _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _CPIXH,   _CPIXL,   _CP_IXd,  _NOP       ; B
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DQ _NOP,     _NOP,     _NOP,     _DDCB,    _NOP,     _NOP,     _NOP,     _NOP       ; C
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; D
-    DQ _NOP,     _POPIX,   _NOP,     _EX_SP_IX,_NOP,     _PUSHIX,  _NOP,     _NOP
-    DQ _NOP,     _JP_IX,   _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; E
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DQ _NOP,     _LDSPIX,  _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; F
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DD _NOP,     _ADDIXBC, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 0
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DD _NOP,     _ADDIXDE, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 1
+    DD _NOP,     _LDIXN,   _LD_N_IX, _INCIX,   _INCIXH,  _DECIXH,  _LDIXHN,  _NOP
+    DD _NOP,     _ADDIXIX, _LDIX_N,  _DECIX,   _INCIXL,  _DECIXL,  _LDIXLN,  _NOP       ; 2
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _INC_IXd, _DEC_IXd, _LD_IXD_N,_NOP
+    DD _NOP,     _ADDIXSP, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 3
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDB_IXH, _LDB_IXL, _LDB_IXD, _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDC_IXH, _LDC_IXL, _LDC_IXD, _NOP       ; 4
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDD_IXH, _LDD_IXL, _LDD_IXD, _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDE_IXH, _LDE_IXL, _LDE_IXD, _NOP       ; 5
+    DD _LD_IXH_B,_LD_IXH_C,_LD_IXH_D,_LD_IXH_E,_LD_IXH_H,_LD_IXH_L,_LDH_IXD, _LD_IXH_A
+    DD _LD_IXL_B,_LD_IXL_C,_LD_IXL_D,_LD_IXL_E,_LD_IXL_H,_LD_IXL_L,_LDL_IXD, _LD_IXL_A  ; 6
+    DD _LD_IXD_B,_LD_IXD_C,_LD_IXD_D,_LD_IXD_E,_LD_IXD_H,_LD_IXD_L,_NOP,     _LD_IXD_A
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDA_IXH, _LDA_IXL, _LDA_IXD, _NOP       ; 7
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _ADDIXH,  _ADDIXL,  _ADDA_IXd,_NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _ADCA_IXd,_NOP       ; 8
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _SUBIXH,  _SUBIXL,  _SUB_IXd, _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _SBCA_IXd,_NOP       ; 9
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _ANDIXH,  _ANDIXL,  _AND_IXd, _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _XOR_IXd, _NOP       ; A
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _ORIXH,   _ORIXL,   _OR_IXd,  _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _CPIXH,   _CPIXL,   _CP_IXd,  _NOP       ; B
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DD _NOP,     _NOP,     _NOP,     _DDCB,    _NOP,     _NOP,     _NOP,     _NOP       ; C
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; D
+    DD _NOP,     _POPIX,   _NOP,     _EX_SP_IX,_NOP,     _PUSHIX,  _NOP,     _NOP
+    DD _NOP,     _JP_IX,   _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; E
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DD _NOP,     _LDSPIX,  _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; F
 
 ; Opcode table (DD CB)
 GLOBAL OpcodeDDCB
 OpcodeDDCB:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RLC_IXd, _NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RRC_IXd, _NIMP3     ; 0
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RL_IXd,  _NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RR_IXd,  _NIMP3     ; 1
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SLA_IXd, _NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRA_IXd, _NIMP3     ; 2
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRL_IXd, _NIMP3     ; 3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT0_IXD,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT1_IXD,_NIMP3     ; 4
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT2_IXD,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT3_IXD,_NIMP3     ; 5
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT4_IXD,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT5_IXD,_NIMP3     ; 6
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT6_IXD,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT7_IXD,_NIMP3     ; 7
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES0_IXd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES1_IXd,_NIMP3     ; 8
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES2_IXd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES3_IXd,_NIMP3     ; 9
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES4_IXd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES5_IXd,_NIMP3     ; A
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES6_IXd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES7_IXd,_NIMP3     ; B
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET0_IXd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET1_IXd,_NIMP3     ; C
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET2_IXd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET3_IXd,_NIMP3     ; D
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET4_IXd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET5_IXd,_NIMP3     ; E
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET6_IXd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET7_IXd,_NIMP3     ; F
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RLC_IXd, _NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RRC_IXd, _NIMP3     ; 0
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RL_IXd,  _NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RR_IXd,  _NIMP3     ; 1
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SLA_IXd, _NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRA_IXd, _NIMP3     ; 2
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRL_IXd, _NIMP3     ; 3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT0_IXD,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT1_IXD,_NIMP3     ; 4
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT2_IXD,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT3_IXD,_NIMP3     ; 5
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT4_IXD,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT5_IXD,_NIMP3     ; 6
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT6_IXD,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT7_IXD,_NIMP3     ; 7
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES0_IXd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES1_IXd,_NIMP3     ; 8
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES2_IXd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES3_IXd,_NIMP3     ; 9
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES4_IXd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES5_IXd,_NIMP3     ; A
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES6_IXd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES7_IXd,_NIMP3     ; B
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET0_IXd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET1_IXd,_NIMP3     ; C
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET2_IXd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET3_IXd,_NIMP3     ; D
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET4_IXd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET5_IXd,_NIMP3     ; E
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET6_IXd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET7_IXd,_NIMP3     ; F
 
 ; Opcode table (ED)
 GLOBAL OpcodeED
 OpcodeED:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 0
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 1
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 2
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 3
-    DQ _INB_C,   _OUT_C_B, _SBCHLBC, _LD_N_BC, _NEG,     _RETN,    _IM0,     _LDIA
-    DQ _INC_C,   _OUT_C_C, _ADCHLBC, _LDBC_N,  _NIMP2,   _RETI,    _NIMP2,   _LDRA      ; 4
-    DQ _IND_C,   _OUT_C_D, _SBCHLDE, _LD_N_DE, _NIMP2,   _NIMP2,   _IM1,     _LDAI
-    DQ _INE_C,   _OUT_C_E, _ADCHLDE, _LDDE_N,  _NIMP2,   _NIMP2,   _IM2,     _LDAR      ; 5
-    DQ _INH_C,   _OUT_C_H, _SBCHLHL, _LD_NN_HL,_NIMP2,   _NIMP2,   _NIMP2,   _RRD
-    DQ _INL_C,   _OUT_C_L, _ADCHLHL, _LDHL_N,  _NIMP2,   _NIMP2,   _NIMP2,   _RLD       ; 6
-    DQ _NIMP2,   _NIMP2,   _SBCHLSP, _LD_N_SP, _NIMP2,   _NIMP2,   _NIMP2,   _NIMP2
-    DQ _INA_C,   _OUT_C_A, _ADCHLSP, _LDSP_N,  _NIMP2,   _NIMP2,   _NIMP2,   _NOLIST    ; 7
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 8
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 9
-    DQ _LDI,     _CPI,     _INI,     _OUTI,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _LDD,     _CPD,     _NIMP2,   _OUTD,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; A
-    DQ _LDIR,    _CPIR,    _INIR,    _OTIR,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _LDDR,    _CPDR,    _NIMP2,   _OTDR,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; B
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; C
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; D
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; E
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
-    DQ _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; F
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 0
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 1
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 2
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 3
+    DD _INB_C,   _OUT_C_B, _SBCHLBC, _LD_N_BC, _NEG,     _RETN,    _IM0,     _LDIA
+    DD _INC_C,   _OUT_C_C, _ADCHLBC, _LDBC_N,  _NIMP2,   _RETI,    _NIMP2,   _LDRA      ; 4
+    DD _IND_C,   _OUT_C_D, _SBCHLDE, _LD_N_DE, _NIMP2,   _NIMP2,   _IM1,     _LDAI
+    DD _INE_C,   _OUT_C_E, _ADCHLDE, _LDDE_N,  _NIMP2,   _NIMP2,   _IM2,     _LDAR      ; 5
+    DD _INH_C,   _OUT_C_H, _SBCHLHL, _LD_NN_HL,_NIMP2,   _NIMP2,   _NIMP2,   _RRD
+    DD _INL_C,   _OUT_C_L, _ADCHLHL, _LDHL_N,  _NIMP2,   _NIMP2,   _NIMP2,   _RLD       ; 6
+    DD _NIMP2,   _NIMP2,   _SBCHLSP, _LD_N_SP, _NIMP2,   _NIMP2,   _NIMP2,   _NIMP2
+    DD _INA_C,   _OUT_C_A, _ADCHLSP, _LDSP_N,  _NIMP2,   _NIMP2,   _NIMP2,   _NOLIST    ; 7
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 8
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; 9
+    DD _LDI,     _CPI,     _INI,     _OUTI,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _LDD,     _CPD,     _NIMP2,   _OUTD,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; A
+    DD _LDIR,    _CPIR,    _INIR,    _OTIR,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _LDDR,    _CPDR,    _NIMP2,   _OTDR,    _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; B
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; C
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; D
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; E
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST
+    DD _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST,  _NOLIST    ; F
 
 ; Opcode table (FD)
 GLOBAL OpcodeFD
 OpcodeFD:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DQ _NOP,     _ADDIYBC, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 0
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DQ _NOP,     _ADDIYDE, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 1
-    DQ _NOP,     _LDIYN,   _LD_N_IY, _INCIY,   _INCIYH,  _DECIYH,  _LDIYHN,  _NOP
-    DQ _NOP,     _ADDIYIY, _LDIY_N,  _DECIY,   _INCIYL,  _DECIYL,  _LDIYLN,  _NOP       ; 2
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _INC_IYd, _DEC_IYd, _LD_IYD_N,_NOP
-    DQ _NOP,     _ADDIYSP, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 3
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDB_IYH, _LDB_IYL, _LDB_IYD, _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDC_IYH, _LDC_IYL, _LDC_IYD, _NOP       ; 4
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDD_IYH, _LDD_IYL, _LDD_IYD, _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDE_IYH, _LDE_IYL, _LDE_IYD, _NOP       ; 5
-    DQ _LD_IYH_B,_LD_IYH_C,_LD_IYH_D,_LD_IYH_E,_LD_IYH_H,_LD_IYH_L,_LDH_IYD, _LD_IYH_A
-    DQ _LD_IYL_B,_LD_IYL_C,_LD_IYL_D,_LD_IYL_E,_LD_IYL_H,_LD_IYL_L,_LDL_IYD, _LD_IYL_A  ; 6
-    DQ _LD_IYD_B,_LD_IYD_C,_LD_IYD_D,_LD_IYD_E,_LD_IYD_H,_LD_IYD_L,_NIMP2,   _LD_IYD_A
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _LDA_IYH, _LDA_IYL, _LDA_IYD, _NOP       ; 7
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ADDIYH,  _ADDIYL,  _ADDA_IYd,_NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _ADCA_IYd,_NOP       ; 8
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _SUBIYH,  _SUBIYL,  _SUB_IYd, _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _SBCA_IYd,_NOP       ; 9
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ANDIYH,  _ANDIYL,  _AND_IYd, _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _XOR_IYd, _NOP       ; A
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _ORIYH,   _ORIYL,   _OR_IYd,  _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _CPIYH,   _CPIYL,   _CP_IYd,  _NOP       ; B
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DQ _NOP,     _NOP,     _NOP,     _FDCB,    _NOP,     _NOP,     _NOP,     _NOP       ; C
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; D
-    DQ _NOP,     _POPIY,   _NOP,     _EX_SP_IY,_NOP,     _PUSHIY,  _NOP,     _NOP
-    DQ _NOP,     _JP_IY,   _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; E
-    DQ _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
-    DQ _NOP,     _LDSPIY,  _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; F
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DD _NOP,     _ADDIYBC, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 0
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DD _NOP,     _ADDIYDE, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 1
+    DD _NOP,     _LDIYN,   _LD_N_IY, _INCIY,   _INCIYH,  _DECIYH,  _LDIYHN,  _NOP
+    DD _NOP,     _ADDIYIY, _LDIY_N,  _DECIY,   _INCIYL,  _DECIYL,  _LDIYLN,  _NOP       ; 2
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _INC_IYd, _DEC_IYd, _LD_IYD_N,_NOP
+    DD _NOP,     _ADDIYSP, _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; 3
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDB_IYH, _LDB_IYL, _LDB_IYD, _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDC_IYH, _LDC_IYL, _LDC_IYD, _NOP       ; 4
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDD_IYH, _LDD_IYL, _LDD_IYD, _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDE_IYH, _LDE_IYL, _LDE_IYD, _NOP       ; 5
+    DD _LD_IYH_B,_LD_IYH_C,_LD_IYH_D,_LD_IYH_E,_LD_IYH_H,_LD_IYH_L,_LDH_IYD, _LD_IYH_A
+    DD _LD_IYL_B,_LD_IYL_C,_LD_IYL_D,_LD_IYL_E,_LD_IYL_H,_LD_IYL_L,_LDL_IYD, _LD_IYL_A  ; 6
+    DD _LD_IYD_B,_LD_IYD_C,_LD_IYD_D,_LD_IYD_E,_LD_IYD_H,_LD_IYD_L,_NIMP2,   _LD_IYD_A
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _LDA_IYH, _LDA_IYL, _LDA_IYD, _NOP       ; 7
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _ADDIYH,  _ADDIYL,  _ADDA_IYd,_NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _ADCA_IYd,_NOP       ; 8
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _SUBIYH,  _SUBIYL,  _SUB_IYd, _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _SBCA_IYd,_NOP       ; 9
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _ANDIYH,  _ANDIYL,  _AND_IYd, _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NIMP2,   _NIMP2,   _XOR_IYd, _NOP       ; A
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _ORIYH,   _ORIYL,   _OR_IYd,  _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _CPIYH,   _CPIYL,   _CP_IYd,  _NOP       ; B
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DD _NOP,     _NOP,     _NOP,     _FDCB,    _NOP,     _NOP,     _NOP,     _NOP       ; C
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; D
+    DD _NOP,     _POPIY,   _NOP,     _EX_SP_IY,_NOP,     _PUSHIY,  _NOP,     _NOP
+    DD _NOP,     _JP_IY,   _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; E
+    DD _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP
+    DD _NOP,     _LDSPIY,  _NOP,     _NOP,     _NOP,     _NOP,     _NOP,     _NOP       ; F
 
 ; Opcode table (FD CB)
 GLOBAL OpcodeFDCB
 OpcodeFDCB:
     ;   0/8       1/9       2/A       3/B       4/C       5/D       6/E       7/F
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RLC_IYd, _NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RRC_IYd, _NIMP3     ; 0
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RL_IYd,  _NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RR_IYd,  _NIMP3     ; 1
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SLA_IYd, _NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRA_IYd, _NIMP3     ; 2
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRL_IYd, _NIMP3     ; 3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT0_IYD,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT1_IYD,_NIMP3     ; 4
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT2_IYD,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT3_IYD,_NIMP3     ; 5
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT4_IYD,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT5_IYD,_NIMP3     ; 6
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT6_IYD,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT7_IYD,_NIMP3     ; 7
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES0_IYd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES1_IYd,_NIMP3     ; 8
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES2_IYd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES3_IYd,_NIMP3     ; 9
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES4_IYd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES5_IYd,_NIMP3     ; A
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES6_IYd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES7_IYd,_NIMP3     ; B
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET0_IYd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET1_IYd,_NIMP3     ; C
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET2_IYd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET3_IYd,_NIMP3     ; D
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET4_IYd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET5_IYd,_NIMP3     ; E
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET6_IYd,_NIMP3
-    DQ _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET7_IYd,_NIMP3     ; F
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RLC_IYd, _NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RRC_IYd, _NIMP3     ; 0
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RL_IYd,  _NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RR_IYd,  _NIMP3     ; 1
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SLA_IYd, _NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRA_IYd, _NIMP3     ; 2
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SRL_IYd, _NIMP3     ; 3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT0_IYD,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT1_IYD,_NIMP3     ; 4
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT2_IYD,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT3_IYD,_NIMP3     ; 5
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT4_IYD,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT5_IYD,_NIMP3     ; 6
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT6_IYD,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _BIT7_IYD,_NIMP3     ; 7
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES0_IYd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES1_IYd,_NIMP3     ; 8
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES2_IYd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES3_IYd,_NIMP3     ; 9
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES4_IYd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES5_IYd,_NIMP3     ; A
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES6_IYd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _RES7_IYd,_NIMP3     ; B
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET0_IYd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET1_IYd,_NIMP3     ; C
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET2_IYd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET3_IYd,_NIMP3     ; D
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET4_IYd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET5_IYd,_NIMP3     ; E
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET6_IYd,_NIMP3
+    DD _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _NIMP3,   _SET7_IYd,_NIMP3     ; F
