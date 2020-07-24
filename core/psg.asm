@@ -336,9 +336,9 @@ Frequencia:
 SECTION .bss
 
 ; Channels period
-GLOBAL Signal, Period1, Period2, Period3, Period4
-Signal      RESB 1
+GLOBAL Period1, Period2, Period3, Period4, Signal
 Period1     RESD 1
 Period2     RESD 1
 Period3     RESD 1
 Period4     RESD 1
+Signal      RESB 1

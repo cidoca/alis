@@ -158,7 +158,7 @@ WM8:    test BYTE [RAMSelect], 8
 
 SECTION .bss
 
-GLOBAL garbage, ROM_size, ROM
+GLOBAL ROM, garbage, ROM_size
+ROM         RESQ 1
 garbage     RESW 1
 ROM_size    RESB 1
-ROM         RESQ 1

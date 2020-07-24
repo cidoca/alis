@@ -71,7 +71,7 @@ NMI     RESB 1
 
 ; **** IO ****
 GLOBAL Nationalization
-Nationalization RESB 1
+Nationalization RESB 2
 
 
 ; **** PSG ****

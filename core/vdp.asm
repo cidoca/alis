@@ -501,15 +501,14 @@ palette:
 
 SECTION .bss
 
+GLOBAL ScanLine, LineInt, VDPCounter
+vb          RESQ 1
 scrollx     RESD 1
 pal         RESD 1
-vb          RESQ 1
-sl          RESB 1
 sb          RESD 1
+ScanLine    RESD 1          ; Current scanline
+sl          RESB 1
 s8x         RESB 1
 RenderBL2   RESB 1
-
-GLOBAL ScanLine, LineInt, VDPCounter
-ScanLine    RESD 1          ; Current scanline
 LineInt     RESB 1          ; Line Interrupt pending
 VDPCounter  RESB 1          ; Line Interrupt Counter
