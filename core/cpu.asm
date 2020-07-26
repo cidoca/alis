@@ -819,17 +819,43 @@ LDNHL1: add DWORD [rPCx], 3
 GLOBAL _DAA
 _DAA:
         mov al, BYTE [rAcc]
-        mov ah, BYTE [Flag]
-        and BYTE [Flag], 2
-        test ah, 2
-        jnz DAA0
-        sahf
-        ;daa
-        jmp DAA1
-DAA0:   sahf
-        ;das
-DAA1:   lahf
-        and ah, 11010101b
+        test BYTE [Flag], 2
+        jz DAA2
+        test BYTE [Flag], 1
+        jz DAA1
+        test BYTE [Flag], 16
+        jz DAA0
+        add al, 09Ah
+        jmp DAA6
+DAA0:   add al, 0A0h
+        jmp DAA6
+DAA1:   test BYTE [Flag], 16
+        jz DAA6
+        add al, 0FAh
+        jmp DAA6
+
+DAA2:   test BYTE [Flag], 16
+        jnz DAA3
+        mov ah, al
+        and ah, 00Fh
+        cmp ah, 10
+        jb DAA4
+DAA3:   add al, 006h
+        jc DAA5
+
+DAA4:   test BYTE [Flag], 1
+        jnz DAA5
+        mov ah, al
+        and ah, 0F0h
+        cmp ah, 0A0h
+        jb DAA6
+DAA5:   or BYTE [Flag], 1
+        add al, 060h
+
+DAA6:   or al, al
+        lahf
+        and ah, 11000100b
+        and BYTE [Flag], 00000011b
         or BYTE [Flag], ah
         mov BYTE [rAcc], al
         inc DWORD [rPCx]
