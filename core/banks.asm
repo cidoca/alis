@@ -33,14 +33,12 @@ init_banks:
 
         ; Initialize banks pointers and page registers
         mov [battery], al
-        mov [RAMSelect], al
         mov rax, [ROM]
         mov [pBank0], rax
         mov [pBank1], rax
-        mov [pBank2], rax       ; ??? Right pointer ???
+        mov [pBank2], rax
         mov [pBank2ROM], rax
-        mov BYTE [RAM+1FFEh], 1
-        mov BYTE [RAM+1FFFh], 2
+        mov DWORD [BankRegs], 002010000h
 
         ret
 
@@ -58,9 +56,17 @@ read_mem:
         cmp esi, 0C000h
         jb RM3
 
-        ; Read RAM or page register
+        ; Read RAM or page register?
+        cmp esi, 0FFFCh
+        jae RM00
+
+        ; Read from RAM
         and esi, 0DFFFh
         add rsi, RAM - 0C000h
+        ret
+
+        ; Read from page register
+RM00:   add esi, BankRegs - 0FFFCh
         ret
 
         ; Select the right bank
@@ -83,8 +89,6 @@ write_mem:
         cmp esi, 0C000h
         jb WM8
 
-        ; ??? F000 - FFFB ???
-
         ; Write in page registers?
         cmp esi, 0FFFCh
         jae WM1
@@ -94,15 +98,18 @@ WM0:    and esi, 0DFFFh
         add rsi, RAM - 0C000h
         ret
 
+        ; Write in banks registers
+WM00:   mov [BankRegs+esi-0FFFCh], al
+        jmp WM0
+
         ; Select
 WM1:    cmp esi, 0FFFCh
         jne WM4
-        mov [RAMSelect], al
         test al, 8
         jnz WM11
         mov rbx, [pBank2ROM]
         mov [pBank2], rbx
-        jmp WM0
+        jmp WM00
 
         ; Initialize battery
 WM11:   mov BYTE [battery], 1
@@ -111,9 +118,9 @@ WM11:   mov BYTE [battery], 1
 WM2:    test al, 4
         jnz WM3
         mov QWORD [pBank2], RAM_EX - 08000h
-        jmp WM0
+        jmp WM00
 WM3:    mov QWORD [pBank2], RAM_EX - 04000h
-        jmp WM0
+        jmp WM00
 
         ; Select ROM page
 WM4:    mov ebx, eax
@@ -128,7 +135,7 @@ WM4:    mov ebx, eax
         jne WM5
         mov [pBank0], rax
         mov eax, ebx
-        jmp WM0
+        jmp WM00
 
         ; Bank 1
 WM5:    cmp esi, 0FFFEh
@@ -136,21 +143,21 @@ WM5:    cmp esi, 0FFFEh
         sub rax, 04000h
         mov [pBank1], rax
         mov eax, ebx
-        jmp WM0
+        jmp WM00
 
         ; Bank 2
 WM6:    sub rax, 08000h
         mov [pBank2ROM], rax
-        test BYTE [RAMSelect], 8
+        test BYTE [BankRegs], 8
         jnz WM66
         mov [pBank2], rax   ; cmov???
 WM66:   mov eax, ebx
-        jmp WM0
+        jmp WM00
 
         ; Write in selected bank
 WM7:    mov rsi, garbage
         ret
-WM8:    test BYTE [RAMSelect], 8
+WM8:    test BYTE [BankRegs], 8
         jz WM7
         add rsi, [pBank2]
         ret
@@ -160,5 +167,5 @@ SECTION .bss
 
 GLOBAL ROM, garbage, ROM_size
 ROM         RESQ 1
-garbage     RESW 1
+garbage     RESD 1
 ROM_size    RESB 1

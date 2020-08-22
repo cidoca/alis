@@ -26,15 +26,16 @@ SECTION .text
 GLOBAL reset_VDP
 reset_VDP:
         ; Initialize VDP controls
-        xor eax, eax
+        xor rax, rax
+        mov [pRAM], rax
         mov [cVDP], al
         mov [VDPLow], al
         mov [VDPStatus], al
         mov [LineInt], al
 
         ; Clear registers, palette and video memory
-        mov ecx, (8+16+32+4000h)/8
-        mov rdi, pRAM
+        mov ecx, (16+32+4000h)/8
+        mov rdi, VDPR
         rep stosq
 
         ret

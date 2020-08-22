@@ -1,5 +1,5 @@
 ; **** BANKS ****
-EXTERN pBank0, pBank1, pBank2, pBank2ROM, battery, RAMSelect
+EXTERN pBank0, pBank1, pBank2, pBank2ROM, battery, BankRegs
 
 ; **** CPU ****
 EXTERN Flag, rAcc, rC, rB, rE, rD, rL, rH

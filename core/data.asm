@@ -17,99 +17,88 @@
 
 SECTION .bss
 
-; **** BANKS ****
-GLOBAL pData, pBank0, pBank1, pBank2, pBank2ROM, battery, RAMSelect
-pData:              ; Alias for start pointer for state block
-pBank0      RESQ 1
-pBank1      RESQ 1
-pBank2      RESQ 1
-pBank2ROM   RESQ 1
-battery     RESB 1
-RAMSelect   RESB 1
+GLOBAL pData, pDataEnd, pDataXEnd, pReg, pRegEnd    ; Alias for memory block
+GLOBAL pBank0, pBank1, pBank2, pBank2ROM, BankRegs  ; ROM bank pointers
+GLOBAL rIX, rIY, rPCx, rSPx, rR, rI                 ; Special purpose registers
+GLOBAL Flag, rAcc, rC, rB, rE, rD, rL, rH           ; Main CPU registers
+GLOBAL Flag2, rAcc2, rC2, rB2, rE2, rD2, rL2, rH2   ; Alternate CPU registers
+GLOBAL TClock, IM, IFF1, IFF2, Halt, NMI            ; CPU interruptions
+GLOBAL rVol1, rVol2, rVol3, rVol4                   ; Sound volume
+GLOBAL rFreq1, rFreq2, rFreq3, rFreq4, rLast        ; Sound frequency
+GLOBAL Noise, FeedBack, NoiseFreq2                  ; Sound seeds
+GLOBAL VDPStatus, cVDP, VDPLow, VDPR                ; Video registers
+GLOBAL pRAM, CRAM, VRAM                             ; Video memory
+GLOBAL RAM, RAM_EX                                  ; RAMs
+GLOBAL battery, Nationalization
 
+pData:                      ; Alias for start pointer for state block
+pBank0      RESQ 1          ; Bank0 pointer
+pBank1      RESQ 1          ; Bank1 pointer
+pBank2      RESQ 1          ; Bank2 pointer (can be ROM or extra RAM pointer)
+pBank2ROM   RESQ 1          ; Bank2 pointer (always pointing to ROM)
 
-; **** CPU ****
-; Primary and secondary registers
-GLOBAL Flag, rAcc, rC, rB, rE, rD, rL, rH
-GLOBAL Flag2, rAcc2, rC2, rB2, rE2, rD2, rL2, rH2
-GLOBAL rR, rI
-Flag    RESB 1
-rAcc    RESB 1
-Flag2   RESB 1
-rAcc2   RESB 1
-rC      RESB 1
-rB      RESB 1
-rC2     RESB 1
-rB2     RESB 1
-rE      RESB 1
-rD      RESB 1
-rE2     RESB 1
-rD2     RESB 1
-rL      RESB 1
-rH      RESB 1
-rL2     RESB 1
-rH2     RESB 1
-rR      RESB 1
-rI      RESB 1
+pRAM        RESQ 1          ; Video memory or palette pointer
 
-; Pointers
-GLOBAL rIX, rIY, rPCx, rSPx
-rIX     RESD 1
-rIY     RESD 1
-rPCx    RESD 1
-rSPx    RESD 1
+rFreq1      RESD 1          ; Sound frequency for channel 1
+rFreq2      RESD 1          ; Sound frequency for channel 2
+rFreq3      RESD 1          ; Sound frequency for channel 3
+rFreq4      RESD 1          ; Sound frequency for channel 4
+rLast       RESD 1
+Noise       RESD 1          ; Sound noise seed
+FeedBack    RESD 1          ; Sound feeback seed
 
-; Interruptions
-GLOBAL TClock, IM, IFF1, IFF2, Halt, NMI
-TClock  RESB 1
-IM      RESB 1
-IFF1    RESB 1
-IFF2    RESB 1
-Halt    RESB 1
-NMI     RESB 1
+pReg:                       ; Alias for start register state block
+rIX         RESD 1          ; Register IX
+rIY         RESD 1          ; Register IY
+rPCx        RESD 1          ; Register PC
+rSPx        RESD 1          ; Register SP
+Flag        RESB 1          ; Flags
+rAcc        RESB 1          ; Register A
+Flag2       RESB 1          ; Flags'
+rAcc2       RESB 1          ; Register A'
+rC          RESB 1          ; Register C
+rB          RESB 1          ; Register B
+rC2         RESB 1          ; Register C'
+rB2         RESB 1          ; Register B'
+rE          RESB 1          ; Register E
+rD          RESB 1          ; Register D
+rE2         RESB 1          ; Register E'
+rD2         RESB 1          ; Register D'
+rL          RESB 1          ; Register L
+rH          RESB 1          ; Register H
+rL2         RESB 1          ; Register L'
+rH2         RESB 1          ; Register H'
+rR          RESB 1          ; Register R
+rI          RESB 1          ; Register I
 
+BankRegs    RESB 4          ; Bank memory registers
+pRegEnd:                    ; Alias for end register state block
 
-; **** IO ****
-GLOBAL Nationalization
-Nationalization RESB 2
+battery     RESB 1          ; Extra RAM enabled
+Nationalization RESB 1
 
+TClock      RESB 1
+IM          RESB 1
+IFF1        RESB 1
+IFF2        RESB 1
+Halt        RESB 1
+NMI         RESB 1
 
-; **** PSG ****
-; Sound registers
-GLOBAL rVol1, rVol2, rVol3, rVol4, rFreq1, rFreq2, rFreq3, rFreq4, rLast
-rVol1   RESB 1
-rVol2   RESB 1
-rVol3   RESB 1
-rVol4   RESB 1
-rFreq1  RESD 1
-rFreq2  RESD 1
-rFreq3  RESD 1
-rFreq4  RESD 1
-rLast   RESD 1
-
-; Noise state
-GLOBAL Noise, FeedBack, NoiseFreq2
-Noise       RESD 1
-FeedBack    RESD 1
+rVol1       RESB 1          ; Sound volume for channel 1
+rVol2       RESB 1          ; Sound volume for channel 2
+rVol3       RESB 1          ; Sound volume for channel 3
+rVol4       RESB 1          ; Sound volume for channel 4
 NoiseFreq2  RESB 1
 
-
-; **** VDP ****
-GLOBAL VDPStatus, cVDP, VDPLow
 VDPStatus   RESB 1
 cVDP        RESB 1          ; First or second write in BFh port
 VDPLow      RESB 1          ; Temporary value for BFh port
 
-GLOBAL pRAM, VDPR, CRAM, VRAM
-pRAM    RESQ 1              ; Pointer for palette or video memory
-VDPR    RESB 16             ; Video registers
-CRAM    RESB 32             ; Color palette
-VRAM    RESB 4000h          ; Video memory
+VDPR        RESB 16         ; Video registers
+CRAM        RESB 32         ; Color palette
+VRAM        RESB 4000h      ; Video memory
 
-
-; **** MEMORY ****
-GLOBAL RAM, pDataEnd, RAM_EX, pDataXEnd
-RAM         RESB 8*1024
+RAM         RESB 8*1024     ; Main RAM
 pDataEnd:                   ; Alias for end pointer for state block
-RAM_EX      RESB 2*16*1024
+RAM_EX      RESB 32*1024    ; Extra RAM
 pDataXEnd:                  ; Alias for end pointer with extra memory block
