@@ -1027,7 +1027,7 @@ _LD_HL_H:__LD_HL_r BYTE [rH]
 _LD_HL_L:__LD_HL_r BYTE [rL]
 _LD_HL_A:__LD_HL_r BYTE [rAcc]
 
-; * HALT - 76 - 4 Clk - BYTE [Halt] computer and wait for interrupt
+; * HALT - 76 - 4 Clk - Halt computer and wait for interrupt
 ; ************************************************************
 GLOBAL _HALT
 _HALT:
@@ -1236,7 +1236,7 @@ _PUSHDE:__PUSHqq BYTE [rE]
 _PUSHHL:__PUSHqq BYTE [rL]
 _PUSHAF:__PUSHqq BYTE [Flag]
 
-; * RST p - (C7,CF,D7,DF,E7,EF,D7,DF) - 11 Clk - Restart to location p
+; * RST p - (C7,CF,D7,DF,E7,EF,F7,FF) - 11 Clk - Restart to location p
 ; **********************************************************************
 GLOBAL _RST0, _RST8, _RST10, _RST18, _RST20, _RST28, _RST30, _RST38
 _RST0:  __RSTp 0h
@@ -1368,7 +1368,7 @@ _ED:
 ; ****************************************
 GLOBAL _DI
 _DI:
-        mov BYTE [IFF1], 0
+        mov WORD [IFF1], 0
         inc DWORD [rPCx]
         add BYTE [TClock], 4
         jmp TLF
@@ -3105,6 +3105,8 @@ _OUTD:
 GLOBAL _LDIR
 _LDIR:
         and BYTE [Flag], 11000001b
+        cmp WORD [rC], 0
+        je LDIR1
         movzx esi, WORD [rL]
         inc WORD [rL]
         call read_mem
@@ -3115,9 +3117,10 @@ _LDIR:
         mov [rsi], al
         dec WORD [rC]
         jz LDIR0
-        add BYTE [TClock], 21
+        or BYTE [Flag], 4
+LDIR0:  add BYTE [TClock], 21
         jmp TLF
-LDIR0:  add DWORD [rPCx], 2
+LDIR1:  add DWORD [rPCx], 2
         add BYTE [TClock], 16
         jmp TLF
 
