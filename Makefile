@@ -22,7 +22,7 @@ $(TARGET): $(OBJECTS)
 	@echo Linking executable $@
 	@$(CC) $(LFLAGS) -o $@ $(OBJECTS) $(LIBS)
 
-main.o: main.c cpu.h
+main.o: main.c cpu.h memory.h vdp.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
