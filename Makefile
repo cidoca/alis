@@ -42,7 +42,7 @@ vdp.o: vdp.c log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-psg.o: psg.c log.h
+psg.o: psg.c psg.h log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
