@@ -37,15 +37,15 @@ void update_o_s(int index);
 void printOpcodeWithRegisters(int p) {
     static int t0 = 0, t2;
 
-    t2 = TClock - t0;
+    t2 = cpu.TClock - t0;
     if (t2 <= 0)
         t2 += 228;
-    t0 = TClock;
+    t0 = cpu.TClock;
 
     update_o_s(p);
     printf("%04X: %-30s AF:%02X%02X BC:%02X%02X DE:%02X%02X HL:%02X%02X IX:%04X IY:%04X SP:%04X %s %03d/%d %d\n",
                 rh[p].rPCx, o_s, rh[p].rAcc, rh[p].Flag & ~0x28, rh[p].B, rh[p].C, rh[p].D, rh[p].E, rh[p].H,
-                rh[p].L, rh[p].rIXx, rh[p].rIYx, rh[p].rSPx, IFF1 ? "EI" : "DI", TClock, VDPscanLine, t2);
+                rh[p].L, rh[p].rIXx, rh[p].rIYx, rh[p].rSPx, cpu.IFF1 ? "EI" : "DI", cpu.TClock, VDPscanLine, t2);
 //    sprintf(tmp, "%04X: %d\n", rh[p].rPCx, t2);
 }
 
@@ -61,20 +61,20 @@ void printHistory() {
 
 int dumping = 0;
 void dumpOpcode() {
-    rh[rh_pos].rIXx = rIX;
-    rh[rh_pos].rIYx = rIY;
-    rh[rh_pos].rPCx = rPC;
-    rh[rh_pos].rSPx = rSP;
-    memcpy(&rh[rh_pos].B, regs, 8);
-    rh[rh_pos].Flag = rFlags;
-    rh[rh_pos].rRx = rR;
+    rh[rh_pos].rIXx = cpu.rIX;
+    rh[rh_pos].rIYx = cpu.rIY;
+    rh[rh_pos].rPCx = cpu.rPC;
+    rh[rh_pos].rSPx = cpu.rSP;
+    memcpy(&rh[rh_pos].B, cpu.regs, 8);
+    rh[rh_pos].Flag = cpu.rFlags;
+    rh[rh_pos].rRx = cpu.rR;
     rh[rh_pos].rIx = 0xFF;
-    rh[rh_pos].opcode[0] = readMemory(rPC);
-    rh[rh_pos].opcode[1] = readMemory(rPC + 1);
-    rh[rh_pos].opcode[2] = readMemory(rPC + 2);
-    rh[rh_pos].opcode[3] = readMemory(rPC + 3);
+    rh[rh_pos].opcode[0] = readMemory(cpu.rPC);
+    rh[rh_pos].opcode[1] = readMemory(cpu.rPC + 1);
+    rh[rh_pos].opcode[2] = readMemory(cpu.rPC + 2);
+    rh[rh_pos].opcode[3] = readMemory(cpu.rPC + 3);
 
-//    if (rPC == 0xDE01)
+//    if (cpu.rPC == 0xDE01)
 //       dumping = 1;
 //        printf("#### PORRRAAAA #####\n");
 
@@ -85,7 +85,7 @@ void dumpOpcode() {
     if (++rh_pos >= REGS_SIZE)
         rh_pos = 0;
 
-    if (rSP > 0xFFFF || rPC > 0xFFFF || rIX > 0xFFFF || rIY > 0xFFFF) {
+    if (cpu.rSP > 0xFFFF || cpu.rPC > 0xFFFF || cpu.rIX > 0xFFFF || cpu.rIY > 0xFFFF) {
         printHistory();
         printf("Pointer overflow!!!\n");
         exit(1);

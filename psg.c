@@ -33,7 +33,7 @@ void writePSG(uint8_t value) {
 
     DBG_PRINT("writing data %02X\n", value);
 
-    TClock += 25;
+    cpu.TClock += 25;
 
     if (value & 0x80) {                 // First write
         last = (value >> 4) & 7;

@@ -10,6 +10,23 @@
 
 #define DBG_TITLE "\033[1;36mCPU:\033[0m "
 
+#define regs    cpu.regs
+#define regs2   cpu.regs2
+#define rFlags  cpu.rFlags
+#define rFlags2 cpu.rFlags2
+#define rI      cpu.rI
+#define rR      cpu.rR
+#define rRhigh  cpu.rRhigh
+#define halt    cpu.halt
+#define IFF1    cpu.IFF1
+#define IFF2    cpu.IFF2
+#define im      cpu.im
+#define rPC     cpu.rPC
+#define TClock  cpu.TClock
+#define rSP     cpu.rSP
+#define rIX     cpu.rIX
+#define rIY     cpu.rIY
+
 #define rA      (regs[7])
 #define rB      (regs[0])
 #define rC      (regs[1])
@@ -860,14 +877,10 @@ void executeNextOpcode() {
                 case 0xC6: case 0xCE: case 0xD6: case 0xDE: case 0xE6: case 0xEE: case 0xF6: case 0xFE:
                     writeMemory(rHL, (readMemory(rHL)) | (1 << ((opCode1 >> 3) & 7)));
                     END_OPCODE(2, 15)
-
-                // Not implemented yet
-//                    default:
-//                        DBG_PRINT_HISTORY
-//                        printf("Opcode CB %02X not implemented!!!\n", opCode1);
-//                        exit(1);
             }
-            break; }
+
+            break;
+        }
 
         // CALL Z - 10/17
         case 0xCC:
@@ -1364,83 +1377,59 @@ void executeNextOpcode() {
                     switch (opCode3) {
 
                         // RLC (Ii+d), #r# - 23 - SZHPNC
-                        case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x06: case 0x07: {
+                        case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x06: case 0x07:
                             mem = (mem << 1) | (mem >> 7);
                             rFlags = GET_FLAG_SZP(mem) | (mem & FLAG_C);
-                            writeMemory(addr, mem);
-                            if ((opCode3 & 7) != 6)
-                                regs[opCode3 & 7] = mem;
-                            END_OPCODE(4, 23) }
+                            break;
 
                         // RRC (Ii+d), #r# - 23 - SZHPNC
-                        case 0x08: case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0E: case 0x0F: {
+                        case 0x08: case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0E: case 0x0F:
                             mem = (mem >> 1) | (mem << 7);
                             rFlags = GET_FLAG_SZP(mem) | (mem & 0x80 ? FLAG_C : 0);
-                            writeMemory(addr, mem);
-                            if ((opCode3 & 7) != 6)
-                                regs[opCode3 & 7] = mem;
-                            END_OPCODE(4, 23) }
+                            break;
 
                         // RL (Ii+d), #r# - 23 - SZHPNC
-                        case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: case 0x17: {
+                        case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: case 0x17:
                             byte2 = mem;
                             mem = (mem << 1) | (rFlags & FLAG_C);
                             rFlags = GET_FLAG_SZP(mem) | (byte2 >> 7);
-                            writeMemory(addr, mem);
-                            if ((opCode3 & 7) != 6)
-                                regs[opCode3 & 7] = mem;
-                            END_OPCODE(4, 23) }
+                            break;
 
                         // RR (Ii+d), #r# - 23 - SZHPNC
-                        case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E: case 0x1F: {
+                        case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E: case 0x1F:
                             byte2 = mem;
                             mem = (mem >> 1) | (rFlags << 7);
                             rFlags = GET_FLAG_SZP(mem) | (byte2 & 1);
-                            writeMemory(addr, mem);
-                            if ((opCode3 & 7) != 6)
-                                regs[opCode3 & 7] = mem;
-                            END_OPCODE(4, 23) }
+                            break;
 
                         // SLA (Ii+d), #r# - 23 - SZHPNC
-                        case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27: {
+                        case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27:
                             rFlags = mem >> 7;
                             mem <<= 1;
                             rFlags |= GET_FLAG_SZP(mem);
-                            writeMemory(addr, mem);
-                            if ((opCode3 & 7) != 6)
-                                regs[opCode3 & 7] = mem;
-                            END_OPCODE(4, 23) }
+                            break;
 
                         // SRA (Ii+d), #r# - 23 - SZHPNC
-                        case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2E: case 0x2F: {
+                        case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2E: case 0x2F:
                             rFlags = mem & FLAG_C;
                             mem = ((int8_t)mem) >> 1;
                             rFlags |= GET_FLAG_SZP(mem);
-                            writeMemory(addr, mem);
-                            if ((opCode3 & 7) != 6)
-                                regs[opCode3 & 7] = mem;
-                            END_OPCODE(4, 23) }
+                            break;
 
                         // SLL (Ii+d), #r# - 23 - SZHPNC
-                        case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37: {
+                        case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
                             rFlags = mem >> 7;
                             mem <<= 1;
                             mem++;
                             rFlags |= GET_FLAG_SZP(mem);
-                            writeMemory(addr, mem);
-                            if ((opCode3 & 7) != 6)
-                                regs[opCode3 & 7] = mem;
-                            END_OPCODE(4, 23) }
+                            break;
 
                         // SRL (Ii+d), #r# - 23 - SZHPNC
-                        case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F: {
+                        case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
                             rFlags = mem & FLAG_C;
                             mem >>= 1;
                             rFlags |= GET_FLAG_SZP(mem);
-                            writeMemory(addr, mem);
-                            if ((opCode3 & 7) != 6)
-                                regs[opCode3 & 7] = mem;
-                            END_OPCODE(4, 23) }
+                            break;
 
                         // BIT b, (Ii+d) - 20 - SZHPN
                         case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x46: case 0x47:
@@ -1466,10 +1455,7 @@ void executeNextOpcode() {
                         case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7:
                         case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF:
                             mem &= ~(1 << ((opCode3 >> 3) & 7));
-                            writeMemory(addr, mem);
-                            if ((opCode3 & 7) != 6)
-                                regs[opCode3 & 7] = mem;
-                            END_OPCODE(4, 23)
+                            break;
 
                         // SET b, (Ii+d), #r# - 23 -
                         case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC6: case 0xC7:
@@ -1481,18 +1467,25 @@ void executeNextOpcode() {
                         case 0xF0: case 0xF1: case 0xF2: case 0xF3: case 0xF4: case 0xF5: case 0xF6: case 0xF7:
                         case 0xF8: case 0xF9: case 0xFA: case 0xFB: case 0xFC: case 0xFD: case 0xFE: case 0xFF:
                             mem |= (1 << ((opCode3 >> 3) & 7));
-                            writeMemory(addr, mem);
-                            if ((opCode3 & 7) != 6)
-                                regs[opCode3 & 7] = mem;
-                            END_OPCODE(4, 23)
-
-                        // Not implemented yet
-//                            default:
-//                                DBG_PRINT_HISTORY
-//                                printf("Opcode %X CB ** %02X not implemented!!!\n", opCode0, opCode3);
-//                                exit(1);
+                            break;
                     }
-                    break; }
+
+                    if ((opCode3 & 0xC0) != 0x40) {     // Not BIT instruction
+                        writeMemory(addr, mem);
+                        if ((opCode3 & 7) != 6)
+                            regs[opCode3 & 7] = mem;
+                        rPC += 4;
+                        TClock += 23;
+                    }
+
+                    break;
+                }
+
+                // Prefix DD/FD again
+                case 0xDD: case 0xFD:
+                    rPC++;
+                    TClock += 4;
+                    return;
 
                 // POP Ii - 14
                 case 0xE1:
@@ -1528,16 +1521,17 @@ void executeNextOpcode() {
                 // Not implemented yet
                 default:
                     DBG_PRINT_HISTORY
-                    printf("Opcode %X %02X not implemented!!!\n", opCode0, opCode1);
+                    printf("Opcode %02X %02X not implemented !!!\n", opCode0, opCode1);
                     END_OPCODE(2, 8);
-//                        exit(1);
+//                    exit(1);
             }
 
             if (opCode0 & 0x20)
                 rIY = index;
             else
                 rIX = index;
-            break; }
+            break;
+        }
 
         // SBC A, n - 7 - SZHPNC
         case 0xDE: {
@@ -1718,7 +1712,7 @@ void executeNextOpcode() {
 
                 // IM 0 - 8
                 case 0x46:
-                    printf("Interrupt mode 0 not supported!\n");
+                    printf("Interrupt mode 0 not supported !!!\n");
                     exit(1);
 
                 // LD I, A - 9
@@ -2013,6 +2007,7 @@ void executeNextOpcode() {
                     if (tmp == 0) {
                         END_OPCODE(2, 16)
                     } else {
+                        // rR++;
                         rFlags |= FLAG_PV;
                         TClock += 21;
                         break;
@@ -2145,10 +2140,12 @@ void executeNextOpcode() {
                 // Not implemented yet
                 default:
                     DBG_PRINT_HISTORY
-                    printf("Opcode ED %02X not implemented!!!\n", opCode1);
+                    printf("Opcode %02X %02X not implemented !!!\n", opCode0, opCode1);
                     exit(1);
             }
-            break; }
+
+            break;
+        }
 
         // XOR n - 7 - SZHPNC
         case 0xEE:
@@ -2265,11 +2262,5 @@ void executeNextOpcode() {
             const uint8_t imm = readMemory(rPC + 1);
             rFlags = GET_SUB_FLAG_HVNC(imm) | GET_FLAG_SZ(rA - imm);
             END_OPCODE(2, 7) }
-
-        // Not implemented yet
-        default:
-            DBG_PRINT_HISTORY
-            printf("Opcode %02X not implemented!!!\n", opCode0);
-            exit(1);
     }
 }
