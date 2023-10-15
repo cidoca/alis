@@ -2,14 +2,19 @@
 #include "cpu.h"
 #include "memory.h"
 #include "vdp.h"
+#include "psg.h"
+#include "sdl.h"
 
 int main(int argc, char **argv) {
     loadROM(argv[1]);
 
     resetCPU();
     resetVDP();
-    for (int i = 0; i < 16384; i++)
-        executeNextOpcode();
+    resetPSG();
+
+    SDLinit();
+    SDLmainLoop();
+    SDLdeinit();
 
     return 0;
 }

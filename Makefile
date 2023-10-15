@@ -1,5 +1,5 @@
 TARGET=alis
-OBJECTS=main.o cpu.o io.o memory.o vdp.o psg.o ga.o
+OBJECTS=main.o cpu.o io.o memory.o vdp.o psg.o ga.o sdl.o
 
 CC=gcc
 LIBS=`sdl2-config --libs`
@@ -22,7 +22,7 @@ $(TARGET): $(OBJECTS)
 	@echo Linking executable $@
 	@$(CC) $(LFLAGS) -o $@ $(OBJECTS) $(LIBS)
 
-main.o: main.c cpu.h memory.h vdp.h
+main.o: main.c cpu.h memory.h vdp.h psg.h sdl.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
@@ -47,6 +47,10 @@ psg.o: psg.c psg.h log.h
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 ga.o: ga.c log.h
+	@echo Compiling $<
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+sdl.o: sdl.c psg.h vdp.h ga.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
