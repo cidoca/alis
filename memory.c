@@ -1,14 +1,25 @@
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include "memory.h"
 #include "log.h"
 
 #define DBG_TITLE "\033[1;34mMEMORY:\033[0m "
 
+#define RAM         mem.RAM
+#define RAM_EX      mem.RAM_EX
+#define bankMask    mem.bankMask
+#define frameConfig mem.frameConfig
+
 #define FRAME2_RAM      0x08    // 0 = ROM, 1 = RAM
 #define FRAME2_BANK1    0x04    // 0 = bank0, 1 = bank1
 
-uint8_t bankMask, frameConfiguration[4] = { 0, 0, 1, 2 };
-uint8_t RAM[8 * 1024], RAM_EX[32 * 1024], ROM[1024 * 1024];
+struct MEMORY mem;
+uint8_t ROM[1024 * 1024];
 uint8_t *pBank0 = ROM, *pBank1 = ROM, *pBank2 = ROM, *pBank2ROM = ROM;
 
 const uint8_t readMemory(unsigned address) {
@@ -21,44 +32,84 @@ const uint8_t readMemory(unsigned address) {
     if (address < 0xC000)
         return pBank2[address];
     if (address >= 0xFFFC)
-        return frameConfiguration[address & 0x03];
+        return frameConfig[address & 0x03];
 
     return RAM[address & 0x1FFF];
 }
 
 void writeMemory(unsigned address, uint8_t value) {
-    if (address < 0x8000) {         // Frame 0 and 1 (invalid)
+    // Invalid area
+    if (address < 0x8000) {
         DBG_PRINT("invalid writing %02X to %04X\n", value, address);
-    } else if (address < 0xC000) {  // Frame 2
-        if (frameConfiguration[0] & FRAME2_RAM)
+
+    // External RAM on Frame 2
+    } else if (address < 0xC000) {
+        if (frameConfig[0] & FRAME2_RAM)
             pBank2[address] = value;
         else
             DBG_PRINT("invalid writing %02X to %04X\n", value, address);
+
+    // Frame configuration
     } else if (address >= 0xFFFC) {
-        if (address == 0xFFFC) {    // Frame 2 RAM Control Register
-            frameConfiguration[0] = value;
-            if (value & FRAME2_RAM)          // Activate RAM_EX on Frame 2
+        if (address == 0xFFFC) {
+            frameConfig[0] = value;
+            if (value & FRAME2_RAM)
                 pBank2 = RAM_EX - (value & FRAME2_BANK1 ? 0x4000 : 0x8000);
-            else                    // Restore ROM on Frame 2
+            else
                 pBank2 = pBank2ROM;
             if (value & 0xF3)
                 DBG_PRINT("extra bits %02X in Frame control register %04X\n", value, address);
         } else {
             unsigned offset = (value & bankMask) << 14;
 
-            frameConfiguration[address & 0x03] = value;
+            frameConfig[address & 0x03] = value;
             if (address == 0xFFFD)
                 pBank0 = ROM + offset;
             else if (address == 0xFFFE)
                 pBank1 = ROM + offset - 0x4000;
             else {
                 pBank2ROM = ROM + offset - 0x8000;
-                if (!(frameConfiguration[0] & FRAME2_RAM))
+                if (!(frameConfig[0] & FRAME2_RAM))
                     pBank2 = pBank2ROM;
             }
             if (value & 0xE0)
                 DBG_PRINT("extra bits %02X in Frame control register %04X\n", value, address);
         }
-    } else                          // RAM
+
+    // RAM
+    } else
         RAM[address & 0x1FFF] = value;
+}
+
+void loadROM(const char *fileName) {
+    int fd;
+    ssize_t size;
+    struct stat buf;
+
+    printf("Loading ROM \"%s\" ", fileName);
+    fflush(stdout);
+
+    fd = open(fileName, O_RDONLY);
+    if (fd == -1 || fstat(fd, &buf)) {
+        printf("- ERROR: could not open!!!!\n");
+        exit(1);
+    }
+
+    printf("(%dKb) ... ", (unsigned)buf.st_size / 1024);
+    fflush(stdout);
+
+    size = read(fd, ROM, 1024 * 1024);
+    close(fd);
+
+    if (size != buf.st_size) {
+        printf("ERROR: could not read!!!\n");
+        exit(1);
+    }
+
+    if (size & 0x200)
+        memcpy(ROM, ROM + 512, size - 512);
+    bankMask = (size / 16384) - 1;
+    *(uint32_t*)&frameConfig = 0x02010000;
+
+    printf("OK\n");
 }
