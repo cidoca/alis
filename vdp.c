@@ -12,6 +12,7 @@
 #define commandFF           vdp.commandFF
 #define lowValue            vdp.lowValue
 #define mode                vdp.mode
+#define dataBuffer          vdp.dataBuffer
 #define status              vdp.status
 #define scanLine            vdp.scanLine
 #define lineInt             vdp.lineInt
@@ -126,9 +127,18 @@ uint8_t readVDPHorizontal() {
 }
 
 uint8_t readVDPData() {
-    DBG_PRINT("reading data\n");
+    uint8_t tmp = dataBuffer;
+
 //    commandFF = 0;
-    return 0xFF;
+    if (mode == 0x00)
+        dataBuffer = VRAM[++pRAM];
+    else if (mode == 0x40)
+        dataBuffer = VRAM[pRAM++];
+    else
+        DBG_PRINT("reading data from invalid mode %02X\n", mode);
+
+    pRAM &= 0x3FFF;
+    return tmp;
 }
 
 uint8_t readVDPStatus() {
@@ -137,20 +147,21 @@ uint8_t readVDPStatus() {
     status = 0;
     lineInt = 0;
     commandFF = 0;
-    DBG_PRINT("reading status %02X\n", oldStatus);
+//    DBG_PRINT("reading status %02X\n", oldStatus);
 
     return oldStatus;
 }
 
 void writeVDPData(uint8_t value) {
 //    commandFF = 0;
-    if (mode == 0x40)        // VRAM
+    if (mode == 0x40)
         VRAM[pRAM] = value;
-    else if (mode == 0xC0) { // CRAM
+    else if (mode == 0xC0)
         CRAM[pRAM & 0x1F] = VDPpalette[value & 0x3F];
-    } else
+    else
         DBG_PRINT("writing data %02X to invalid mode %02X\n", value, mode);
 
+    dataBuffer = value;
     pRAM = (pRAM + 1) & 0x3FFF;
 }
 
@@ -241,6 +252,8 @@ void updateCRAMpointer() {
 
 void updateVRAMpointer(uint8_t value) {
     pRAM = ((value & 0x3F) << 8) | lowValue;
+    if (!(value & 0x40))
+        dataBuffer = VRAM[pRAM];
     DBG_PRINT("VRAM pointer %04X %c\n", pRAM, value & 0x40 ? 'W' : 'R');
 }
 
