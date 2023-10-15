@@ -38,7 +38,7 @@ memory.o: memory.c log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-vdp.o: vdp.c log.h
+vdp.o: vdp.c vdp.h cpu.h log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
@@ -50,7 +50,7 @@ ga.o: ga.c log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-log.o: log.c cpu.h memory.h
+log.o: log.c cpu.h vdp.h memory.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 

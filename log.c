@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "cpu.h"
+#include "vdp.h"
 #include "memory.h"
 
 char o_s[32];
@@ -44,7 +45,7 @@ void printOpcodeWithRegisters(int p) {
     update_o_s(p);
     printf("%04X: %-30s AF:%02X%02X BC:%02X%02X DE:%02X%02X HL:%02X%02X IX:%04X IY:%04X SP:%04X %s %d/%d %d\n",
                 rh[p].rPCx, o_s, rh[p].rAcc, rh[p].Flag /*& ~0x28*/, rh[p].B, rh[p].C, rh[p].D, rh[p].E, rh[p].H,
-                rh[p].L, rh[p].rIXx, rh[p].rIYx, rh[p].rSPx, IFF1 ? "EI" : "DI", -1 /*VDPscanLine*/, TClock, t2); //VDPscanLine);
+                rh[p].L, rh[p].rIXx, rh[p].rIYx, rh[p].rSPx, IFF1 ? "EI" : "DI", vdp.scanLine, TClock, t2);
 //    sprintf(tmp, "%04X: %d\n", rh[p].rPCx, t2);
 }
 
@@ -80,7 +81,7 @@ void dumpOpcode() {
 //    if (dumping)
 //    if ((rPC >= 0x4000 && rPC < 0x8000 && (PPIportA & 0x0C) == 0x04) ||
 //        (rPC >= 0x8000 && rPC < 0xC000 && (PPIportA & 0x30) == 0x20))
-        printOpcodeWithRegisters(rh_pos);
+//        printOpcodeWithRegisters(rh_pos);
     if (++rh_pos >= REGS_SIZE)
         rh_pos = 0;
 
