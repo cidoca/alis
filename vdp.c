@@ -32,6 +32,11 @@
 #define STATUS_OVR          0x40
 #define STATUS_COL          0x20
 
+#define TILE_HFLIP          0x0200
+#define TILE_VFLIP          0x0400
+#define TILE_PALETTE        0x0800
+#define TILE_PRIORITY       0x1000
+
 #define VDP0_VSCROLL        0x80
 #define VDP0_HSCROLL        0x40
 #define VDP0_HIDECOL        0x20
@@ -63,25 +68,41 @@ void resetVDP() {
     memset(&vdp, 0, sizeof(vdp));
 }
 
+uint32_t *drawBlankLine(uint32_t *frameBuffer) {
+    uint32_t color = VDPpalette[backgroundColor];
+
+    for (int i = 0; i < 256; i++)
+        *frameBuffer++ = color;
+
+    return frameBuffer;
+}
+
 uint32_t *drawScanLine(uint32_t *frameBuffer) {
+    uint32_t index, tmp;
     uint16_t *pName = pNameTable + (scanLine / 8 * 32);
 
     for (int i = 0; i < 32; i++) {
         unsigned name = *pName++;
-        uint32_t pattern = *(uint32_t*)&VRAM[(name & 0x1FF) * 32 + (scanLine % 8) * 4];
+        uint32_t *pCRAM = &CRAM[name & TILE_PALETTE ? 16 : 0];
+        uint32_t *pPattern = (uint32_t*)&VRAM[(name & 0x1FF) * 32];
+        uint32_t pattern = name & TILE_VFLIP ? pPattern[7 - (scanLine % 8)] : pPattern[scanLine % 8];
 
         for (int j = 0; j < 8; j++) {
-            uint32_t index = (pattern & 0x80808080) >> 7;
-            uint32_t tmp = index >> 7;
+            if (name & TILE_HFLIP) {
+                index = (pattern & 0x01010101);
+                pattern >>= 1;
+            } else {
+                index = (pattern & 0x80808080) >> 7;
+                pattern <<= 1;
+            }
 
+            tmp = index >> 7;
             index |= tmp;
             tmp >>= 7;
             index |= tmp;
             tmp >>= 7;
             index |= tmp;
-
-            *frameBuffer++ = CRAM[(index & 0xF) + (name & 0x800 ? 16 : 0)];
-            pattern <<= 1;
+            *frameBuffer++ = pCRAM[index & 0xF];
         }
     }
 
@@ -100,8 +121,12 @@ void renderFrame(uint32_t *frameBuffer) {
         }
         TClock -= 228;
 
-        if (scanLine < 192)
-            frameBuffer = drawScanLine(frameBuffer);
+        if (scanLine < 192) {
+            if (VDP1 & VDP1_BLK)
+                frameBuffer = drawScanLine(frameBuffer);
+            else
+                frameBuffer = drawBlankLine(frameBuffer);
+        }
 
         scanLine++;
         if (scanLine == 192)
