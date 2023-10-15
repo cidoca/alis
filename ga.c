@@ -3,14 +3,14 @@
 
 #define DBG_TITLE "\033[1;35mGA:\033[0m "
 
+uint8_t joyP1 = 0xFF, joyP2 = 0xFF;
+
 uint8_t readGAJoyP1() {
-    DBG_PRINT("reading P1\n");
-    return 0xFF;
+    return joyP1;
 }
 
 uint8_t readGAJoyP2() {
-    DBG_PRINT("reading P2\n");
-    return 0xFF;
+    return joyP2;
 }
 
 void writeGAMemoryControl(uint8_t value) {

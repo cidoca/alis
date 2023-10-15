@@ -1,3 +1,5 @@
+extern uint8_t joyP1, joyP2;
+
 uint8_t readGAJoyP1();
 uint8_t readGAJoyP2();
 void writeGAMemoryControl(uint8_t value);

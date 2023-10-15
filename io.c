@@ -12,7 +12,7 @@ uint8_t readIO(uint8_t port) {
     if ((port & 0xC0) == 0x80)
         return port & 1 ? readVDPStatus() : readVDPData();
     if ((port & 0xC0) == 0xC0)
-        return port & 1 ? readGAJoyP1() : readGAJoyP2();
+        return port & 1 ? readGAJoyP2() : readGAJoyP1();
 
     DBG_PRINT("reading from %02X\n", port);
     return 0xFF;
