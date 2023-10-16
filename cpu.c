@@ -86,6 +86,7 @@ struct CPU cpu;
 void resetCPU() {
     memset(&cpu, 0, sizeof(cpu));
     im = 1;
+    rSP = 0xD000;
 }
 
 void intZ80() {
