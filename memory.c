@@ -31,8 +31,6 @@ const uint8_t readMemory(unsigned address) {
         return pBank1[address];
     if (address < 0xC000)
         return pBank2[address];
-    if (address >= 0xFFFC)
-        return frameConfig[address & 0x03];
 
     return RAM[address & 0x1FFF];
 }
@@ -49,36 +47,37 @@ void writeMemory(unsigned address, uint8_t value) {
         else
             DBG_PRINT("invalid writing %02X to %04X\n", value, address);
 
-    // Frame configuration
-    } else if (address >= 0xFFFC) {
-        if (address == 0xFFFC) {
-            frameConfig[0] = value;
-            if (value & FRAME2_RAM)
-                pBank2 = RAM_EX - (value & FRAME2_BANK1 ? 0x4000 : 0x8000);
-            else
-                pBank2 = pBank2ROM;
-            if (value & 0xF3)
-                DBG_PRINT("extra bits %02X in Frame control register %04X\n", value, address);
-        } else {
-            unsigned offset = (value & bankMask) << 14;
-
-            frameConfig[address & 0x03] = value;
-            if (address == 0xFFFD)
-                pBank0 = ROM + offset;
-            else if (address == 0xFFFE)
-                pBank1 = ROM + offset - 0x4000;
-            else {
-                pBank2ROM = ROM + offset - 0x8000;
-                if (!(frameConfig[0] & FRAME2_RAM))
-                    pBank2 = pBank2ROM;
-            }
-            if (value & 0xE0)
-                DBG_PRINT("extra bits %02X in Frame control register %04X\n", value, address);
-        }
-
-    // RAM
-    } else
+    // RAM and Frame configuration
+    } else {
         RAM[address & 0x1FFF] = value;
+
+        if (address >= 0xFFFC) {
+            frameConfig[address & 0x03] = value;
+
+            if (address == 0xFFFC) {
+                if (value & FRAME2_RAM)
+                    pBank2 = RAM_EX - (value & FRAME2_BANK1 ? 0x4000 : 0x8000);
+                else
+                    pBank2 = pBank2ROM;
+                if (value & 0xF3)
+                    DBG_PRINT("extra bits %02X in Frame control register %04X\n", value, address);
+            } else {
+                unsigned offset = (value & bankMask) << 14;
+
+                if (address == 0xFFFD)
+                    pBank0 = ROM + offset;
+                else if (address == 0xFFFE)
+                    pBank1 = ROM + offset - 0x4000;
+                else {
+                    pBank2ROM = ROM + offset - 0x8000;
+                    if (!(frameConfig[0] & FRAME2_RAM))
+                        pBank2 = pBank2ROM;
+                }
+                if (value & 0xE0)
+                    DBG_PRINT("extra bits %02X in Frame control register %04X\n", value, address);
+            }
+        }
+    }
 }
 
 void loadROM(const char *fileName) {
