@@ -141,11 +141,10 @@ void executeNextOpcode() {
             END_OPCODE(1, 7)
 
         // INC BC - 6
-        case 0x03: {
-            const unsigned tmpBC = rBC + 1;
-            rB = tmpBC >> 8;
-            rC = tmpBC & 0xFF;
-            END_OPCODE(1, 6) }
+        case 0x03:
+            rC++;
+            if (!rC) rB++;
+            END_OPCODE(1, 6)
 
         // INC r - 4 - SZHPN
         case 0x04: case 0x0C: case 0x14: case 0x1C: case 0x24: case 0x2C: case 0x3C:
@@ -1734,7 +1733,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL + rBC + (tmpFlags & FLAG_C);
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (tmpHL == 0 ? FLAG_Z : 0);
+                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
                     END_OPCODE(2, 15) }
 
                 // LD BC, (nn) - 20
@@ -1764,7 +1763,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL - rDE - (tmpFlags & FLAG_C);
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (tmpHL == 0 ? FLAG_Z : 0);
+                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
                     END_OPCODE(2, 15) }
 
                 // LD (nn), DE - 20
@@ -1792,7 +1791,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL + rDE + (tmpFlags & FLAG_C);
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (tmpHL == 0 ? FLAG_Z : 0);
+                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
                     END_OPCODE(2, 15) }
 
                 // LD DE, (nn) - 20
@@ -1820,7 +1819,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL - rHL - (tmpFlags & FLAG_C);
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (tmpHL == 0 ? FLAG_Z : 0);
+                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
                     END_OPCODE(2, 15) }
 
                 // LD (nn), HL - 20
@@ -1846,7 +1845,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL + rHL + (tmpFlags & FLAG_C);
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (tmpHL == 0 ? FLAG_Z : 0);
+                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
                     END_OPCODE(2, 15) }
 
                 // LD HL, (nn) - 20
@@ -1872,7 +1871,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL - rSP - (tmpFlags & FLAG_C);
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (tmpHL == 0 ? FLAG_Z : 0);
+                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
                     END_OPCODE(2, 15) }
 
                 // LD (nn), SP - 20
@@ -1889,7 +1888,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL + rSP + (tmpFlags & FLAG_C);
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (tmpHL == 0 ? FLAG_Z : 0);
+                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
                     END_OPCODE(2, 15) }
 
                 // LD SP, (nn) - 20
