@@ -23,7 +23,7 @@
 #define nameTable           vdp.nameTable
 #define spriteAttrTable     vdp.spriteAttrTable
 #define spritePatternTable  vdp.spritePatternTable
-#define backgroundColor     vdp.backgroundColor
+#define borderColor         vdp.borderColor
 #define horizontalScroll    vdp.horizontalScroll
 #define verticalScroll      vdp.verticalScroll
 #define lineIntCounter      vdp.lineIntCounter
@@ -69,7 +69,7 @@ void resetVDP() {
 }
 
 uint32_t *drawBlankLine(uint32_t *frameBuffer) {
-    uint32_t color = VDPpalette[backgroundColor];
+    uint32_t color = CRAM[borderColor];
 
     for (int i = 0; i < 256; i++)
         *frameBuffer++ = color;
@@ -78,14 +78,24 @@ uint32_t *drawBlankLine(uint32_t *frameBuffer) {
 }
 
 uint32_t *drawScanLine(uint32_t *frameBuffer) {
-    uint32_t index, tmp;
-    uint16_t *pName = pNameTable + (scanLine / 8 * 32);
+    uint32_t index, tmp, scanLineScrolled = scanLine + verticalScroll;
+    uint8_t col = VDP0 & VDP0_HSCROLL && scanLine < 16 ? 0 : horizontalScroll;
 
+    if (scanLineScrolled >= 224)
+        scanLineScrolled -= 224;
+
+    uint16_t *pName = pNameTable + (scanLineScrolled / 8 * 32);
     for (int i = 0; i < 32; i++) {
         unsigned name = *pName++;
         uint32_t *pCRAM = &CRAM[name & TILE_PALETTE ? 16 : 0];
         uint32_t *pPattern = (uint32_t*)&VRAM[(name & 0x1FF) * 32];
-        uint32_t pattern = name & TILE_VFLIP ? pPattern[7 - (scanLine % 8)] : pPattern[scanLine % 8];
+        uint32_t pattern = name & TILE_VFLIP ? pPattern[7 - (scanLineScrolled % 8)] :
+            pPattern[scanLineScrolled % 8];
+
+        if (i == 23 && VDP0 & VDP0_VSCROLL) {
+            scanLineScrolled = scanLine;
+            pName = pNameTable + (scanLine / 8 * 32) + 24;
+        }
 
         for (int j = 0; j < 8; j++) {
             if (name & TILE_HFLIP) {
@@ -102,11 +112,15 @@ uint32_t *drawScanLine(uint32_t *frameBuffer) {
             index |= tmp;
             tmp >>= 7;
             index |= tmp;
-            *frameBuffer++ = pCRAM[index & 0xF];
+            frameBuffer[col++] = pCRAM[index & 0xF];
         }
     }
 
-    return frameBuffer;
+    if (VDP0 & VDP0_HIDECOL)
+        for (int i = 0; i < 8; i++)
+            frameBuffer[i] = CRAM[borderColor];
+
+    return frameBuffer + 256;
 }
 
 void renderFrame(uint32_t *frameBuffer) {
@@ -129,9 +143,9 @@ void renderFrame(uint32_t *frameBuffer) {
         }
 
         scanLine++;
-        if (scanLine == 192)
+        if (scanLine == 193)
             status |= STATUS_INT;
-        if (scanLine <= 192) {  // TODO: wrong scan line ???
+        if (scanLine <= 193) {
             if (!lineCounter) {
                 lineInt = 1;
                 lineCounter = lineIntCounter;
@@ -243,7 +257,7 @@ void updateVDPregisters(uint8_t value) {
 
         // Background color
         case 7:
-            backgroundColor = lowValue & 0x0F;
+            borderColor = (lowValue & 0x0F) + 16;
             DBG_PRINT("command #7 -> background color [%02X]\n", lowValue);
             break;
 
