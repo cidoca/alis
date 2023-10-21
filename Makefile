@@ -50,7 +50,7 @@ ga.o: ga.c log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-sdl.o: sdl.c psg.h vdp.h ga.h
+sdl.o: sdl.c psg.h vdp.h ga.h log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 

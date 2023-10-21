@@ -10,5 +10,7 @@
     #define DBG_PRINT(f, ...)   {}
 #endif
 
+extern int dumping;
+
 void printHistory();
 void dumpOpcode();

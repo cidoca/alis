@@ -2,6 +2,7 @@
 #include "psg.h"
 #include "ga.h"
 #include "vdp.h"
+#include "log.h"
 
 #ifdef DRAW_TILES
     #define SCREEN_HEIGHT (192 + 128)
@@ -93,6 +94,12 @@ void mapJoystick() {
     if (keys[SDL_SCANCODE_ESCAPE])
         joyP2 &= ~0x10;
 //    if (keys[SDL_SCANCODE_SPACE]) // TODO: missing Z80 NMI logic for pause button
+
+#ifdef DEBUG
+    if (keys[SDL_SCANCODE_F12])
+        dumping = 1;
+#endif
+
 }
 
 void SDLmainLoop() {
