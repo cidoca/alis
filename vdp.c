@@ -123,6 +123,30 @@ uint32_t *drawScanLine(uint32_t *frameBuffer) {
     return frameBuffer + 256;
 }
 
+#ifdef DRAW_TILES
+void drawTiles(uint32_t *frameBuffer) {
+    unsigned spriteStartIndex = (spritePatternTable & 0x04) << 6;
+    for (int i = 0; i < 128; i++) {
+        for (int j = 0; j < 32; j++) {
+            unsigned pal = i / 8 * 32 + j >= spriteStartIndex ? 16 : 0;
+            uint32_t pattern = *(uint32_t*)&VRAM[i / 8 * 1024 + j * 32 + (i % 8) * 4];
+            for (int k = 0; k < 8; k++) {
+                uint32_t tmp, index = (pattern & 0x80808080) >> 7;
+                pattern <<= 1;
+                tmp = index >> 7;
+                index |= tmp;
+                tmp >>= 7;
+                index |= tmp;
+                tmp >>= 7;
+                index |= tmp;
+                *frameBuffer++ = CRAM[pal + (index & 0xF)];
+                //*frameBuffer++ = CRAM[index & 0xF];
+            }
+        }
+    }
+}
+#endif
+
 void renderFrame(uint32_t *frameBuffer) {
     scanLine = 0;
     lineCounter = lineIntCounter;
@@ -153,6 +177,10 @@ void renderFrame(uint32_t *frameBuffer) {
                 lineCounter--;
         }
     }
+
+#ifdef DRAW_TILES
+    drawTiles(frameBuffer);
+#endif
 }
 
 uint8_t readVDPVertical() {

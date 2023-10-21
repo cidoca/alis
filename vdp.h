@@ -1,3 +1,5 @@
+//#define DRAW_TILES
+
 struct VDP {
     uint8_t VRAM[16 * 1024];
     uint8_t commandFF, lowValue, dataBuffer, mode, lineInt, lineCounter, status;
