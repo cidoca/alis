@@ -2,7 +2,7 @@
 
 struct VDP {
     uint8_t VRAM[16 * 1024];
-    uint8_t commandFF, lowValue, dataBuffer, mode, lineInt, lineCounter, status;
+    uint8_t commandFF, lowValue, dataBuffer, writePal, lineInt, lineCounter, status;
     uint8_t VDP0, VDP1, nameTable, spriteAttrTable, spritePatternTable;
     uint8_t borderColor, horizontalScroll, verticalScroll, lineIntCounter;
     uint32_t CRAM[32], pRAM, scanLine;

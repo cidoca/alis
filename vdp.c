@@ -11,7 +11,7 @@
 #define pRAM                vdp.pRAM
 #define commandFF           vdp.commandFF
 #define lowValue            vdp.lowValue
-#define mode                vdp.mode
+#define writePal            vdp.writePal
 #define dataBuffer          vdp.dataBuffer
 #define status              vdp.status
 #define scanLine            vdp.scanLine
@@ -196,15 +196,10 @@ uint8_t readVDPHorizontal() {
 uint8_t readVDPData() {
     uint8_t tmp = dataBuffer;
 
-//    commandFF = 0;
-    if (mode == 0x00)
-        dataBuffer = VRAM[++pRAM];
-    else if (mode == 0x40)
-        dataBuffer = VRAM[pRAM++];
-    else
-        DBG_PRINT("reading data from invalid mode %02X\n", mode);
+    commandFF = 0;
+    dataBuffer = VRAM[pRAM];
+    pRAM = (pRAM + 1) & 0x3FFF;
 
-    pRAM &= 0x3FFF;
     return tmp;
 }
 
@@ -220,15 +215,14 @@ uint8_t readVDPStatus() {
 }
 
 void writeVDPData(uint8_t value) {
-//    commandFF = 0;
-    if (mode == 0x40)
-        VRAM[pRAM] = value;
-    else if (mode == 0xC0)
+    commandFF = 0;
+    dataBuffer = value;
+
+    if (writePal)
         CRAM[pRAM & 0x1F] = VDPpalette[value & 0x3F];
     else
-        DBG_PRINT("writing data %02X to invalid mode %02X\n", value, mode);
+        VRAM[pRAM] = value;
 
-    dataBuffer = value;
     pRAM = (pRAM + 1) & 0x3FFF;
 }
 
@@ -312,29 +306,30 @@ void updateVDPregisters(uint8_t value) {
     }
 }
 
-void updateCRAMpointer() {
-    pRAM = lowValue & 0x1F;
-    DBG_PRINT("CRAM pointer %d\n", pRAM);
-}
-
-void updateVRAMpointer(uint8_t value) {
-    pRAM = ((value & 0x3F) << 8) | lowValue;
-    if (!(value & 0x40))
-        dataBuffer = VRAM[pRAM];
-    DBG_PRINT("VRAM pointer %04X %c\n", pRAM, value & 0x40 ? 'W' : 'R');
-}
-
 void writeVDPCommand(uint8_t value) {
-    if (commandFF) {            // Second write
-        mode = value & 0xC0;
-        if (mode == 0xC0)
-            updateCRAMpointer();
-        else if (mode == 0x80)
+    if (commandFF) {
+        uint8_t mode = value & 0xC0;
+
+        writePal = mode == 0xC0;
+        pRAM = ((value & 0x3F) << 8) | lowValue;
+
+        if (mode == 0x80)
             updateVDPregisters(value);
-        else
-            updateVRAMpointer(value);
-    } else                      // First write
+        else {
+            if (writePal)
+                DBG_PRINT("CRAM pointer %d\n", pRAM & 0x1F);
+            else
+                DBG_PRINT("VRAM pointer %04X %c\n", pRAM, value & 0x40 ? 'W' : 'R');
+
+            if (mode == 0x00) {
+                dataBuffer = VRAM[pRAM];
+                pRAM = (pRAM + 1) & 0x3FFF;
+            }
+        }
+    } else {
         lowValue = value;
+        pRAM = (pRAM & 0x3F00) | value;
+    }
 
     commandFF = !commandFF;
 }
