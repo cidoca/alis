@@ -14,9 +14,7 @@
 #define writePal            vdp.writePal
 #define dataBuffer          vdp.dataBuffer
 #define status              vdp.status
-#define scanLine            vdp.scanLine
 #define lineInt             vdp.lineInt
-#define lineCounter         vdp.lineCounter
 
 #define VDP0                vdp.VDP0
 #define VDP1                vdp.VDP1
@@ -49,7 +47,7 @@
 #define VDP1_MAG            0x01
 
 struct VDP vdp;
-
+int VDPscanLine;
 uint8_t *pSpriteAttrTable = VRAM;
 uint16_t *pNameTable = (uint16_t*)VRAM;
 uint32_t *pSpritePatternTable = (uint32_t*)VRAM;
@@ -78,8 +76,8 @@ uint32_t *drawBlankLine(uint32_t *frameBuffer) {
 }
 
 uint32_t *drawScanLine(uint32_t *frameBuffer) {
-    uint32_t index, tmp, scanLineScrolled = scanLine + verticalScroll;
-    uint8_t col = VDP0 & VDP0_HSCROLL && scanLine < 16 ? 0 : horizontalScroll;
+    uint32_t index, tmp, scanLineScrolled = VDPscanLine + verticalScroll;
+    uint8_t col = VDP0 & VDP0_HSCROLL && VDPscanLine < 16 ? 0 : horizontalScroll;
 
     if (scanLineScrolled >= 224)
         scanLineScrolled -= 224;
@@ -93,8 +91,8 @@ uint32_t *drawScanLine(uint32_t *frameBuffer) {
             pPattern[scanLineScrolled % 8];
 
         if (i == 23 && VDP0 & VDP0_VSCROLL) {
-            scanLineScrolled = scanLine;
-            pName = pNameTable + (scanLine / 8 * 32) + 24;
+            scanLineScrolled = VDPscanLine;
+            pName = pNameTable + (VDPscanLine / 8 * 32) + 24;
         }
 
         for (int j = 0; j < 8; j++) {
@@ -148,10 +146,17 @@ void drawTiles(uint32_t *frameBuffer) {
 #endif
 
 void renderFrame(uint32_t *frameBuffer) {
-    scanLine = 0;
-    lineCounter = lineIntCounter;
+    uint8_t lineCounter;
 
-    while (scanLine < 262) {
+    VDPscanLine = -43;
+    while (VDPscanLine < 262 - 43) {
+        if (VDPscanLine >= 0 && VDPscanLine < 192) {
+            if (VDP1 & VDP1_BLK)
+                frameBuffer = drawScanLine(frameBuffer);
+            else
+                frameBuffer = drawBlankLine(frameBuffer);
+        }
+
         while (TClock < 228) {
             if ((VDP1 & VDP1_IE0 && status & STATUS_INT) || (VDP0 & VDP0_IE1 && lineInt))
                 intZ80();
@@ -159,17 +164,12 @@ void renderFrame(uint32_t *frameBuffer) {
         }
         TClock -= 228;
 
-        if (scanLine < 192) {
-            if (VDP1 & VDP1_BLK)
-                frameBuffer = drawScanLine(frameBuffer);
-            else
-                frameBuffer = drawBlankLine(frameBuffer);
-        }
-
-        scanLine++;
-        if (scanLine == 193)
+        VDPscanLine++;
+        if (VDPscanLine == 193)
             status |= STATUS_INT;
-        if (scanLine <= 193) {
+        if (VDPscanLine == 0)
+            lineCounter = lineIntCounter;
+        if (VDPscanLine >= 0 && VDPscanLine < 193) {
             if (!lineCounter) {
                 lineInt = 1;
                 lineCounter = lineIntCounter;
@@ -184,8 +184,8 @@ void renderFrame(uint32_t *frameBuffer) {
 }
 
 uint8_t readVDPVertical() {
-    DBG_PRINT("reading vertical SL:%d\n", scanLine);
-    return scanLine <= 0xDA ? scanLine : scanLine - 6;
+    DBG_PRINT("reading vertical %02X %d/%d\n", (uint8_t)VDPscanLine,  TClock, VDPscanLine);
+    return (uint8_t)VDPscanLine;
 }
 
 uint8_t readVDPHorizontal() {
@@ -231,74 +231,76 @@ void updateVDPregisters(uint8_t value) {
         // Mode control 1
         case 0:
             VDP0 = lowValue;
-            DBG_PRINT("command #0 -> V:%d H:%d C0:%d IE1:%d EC:%d M4:%d M2:%d S:%d [%02X]\n",
+            DBG_PRINT("command #0 -> V:%d H:%d C0:%d IE1:%d EC:%d M4:%d M2:%d S:%d [%02X] %d/%d\n",
                 VDP0 & 0x80 ? 1 : 0, VDP0 & 0x40 ? 1 : 0, VDP0 & 0x20 ? 1 : 0, VDP0 & 0x10 ? 1 : 0,
-                VDP0 & 0x08 ? 1 : 0, VDP0 & 0x04 ? 1 : 0, VDP0 & 0x02 ? 1 : 0, VDP0 & 0x01, VDP0);
+                VDP0 & 0x08 ? 1 : 0, VDP0 & 0x04 ? 1 : 0, VDP0 & 0x02 ? 1 : 0, VDP0 & 0x01, VDP0,
+                TClock, VDPscanLine);
             break;
 
         // Mode control 2
         case 1:
             VDP1 = lowValue;
-            DBG_PRINT("command #1 -> BL:%d IE0:%d M1:%d M3:%d SIZE:%d MAG:%d [%02X]\n",
+            DBG_PRINT("command #1 -> BL:%d IE0:%d M1:%d M3:%d SIZE:%d MAG:%d [%02X] %d/%d\n",
                 VDP1 & 0x40 ? 1 : 0, VDP1 & 0x20 ? 1 : 0, VDP1 & 0x10 ? 1 : 0, VDP1 & 0x08 ? 1 : 0,
-                VDP1 & 0x02 ? 1 : 0, VDP1 & 0x01, VDP1);
+                VDP1 & 0x02 ? 1 : 0, VDP1 & 0x01, VDP1, TClock, VDPscanLine);
             break;
 
         // Name table
         case 2:
             nameTable = lowValue;
             pNameTable = (uint16_t*)&VRAM[(lowValue & 0x0E) << 10];
-            DBG_PRINT("command #2 -> name table %04X [%02X]\n", (lowValue & 0x0E) << 10, lowValue);
+            DBG_PRINT("command #2 -> name table %04X [%02X] %d/%d\n", (lowValue & 0x0E) << 10,
+                lowValue, TClock, VDPscanLine);
             break;
 
         // Color table (not used ???)
         case 3:
-            DBG_PRINT("command #3 -> color table [%02X]\n", lowValue);
+            DBG_PRINT("command #3 -> color table [%02X] %d/%d\n", lowValue, TClock, VDPscanLine);
             break;
 
         // Tile pattern generator (not used ???)
         case 4:
-            DBG_PRINT("command #4 -> tile pattern table [%02X]\n", lowValue);
+            DBG_PRINT("command #4 -> tile pattern table [%02X] %d/%d\n", lowValue, TClock, VDPscanLine);
             break;
 
         // Sprite attribute table
         case 5:
             spriteAttrTable = lowValue;
             pSpriteAttrTable = &VRAM[(lowValue & 0x7E) << 7];
-            DBG_PRINT("command #5 -> sprite attribute table %04X [%02X]\n",
-                (lowValue & 0x7E) << 7, lowValue);
+            DBG_PRINT("command #5 -> sprite attribute table %04X [%02X] %d/%d\n",
+                (lowValue & 0x7E) << 7, lowValue, TClock, VDPscanLine);
             break;
 
         // Sprite pattern generator
         case 6:
             spritePatternTable = lowValue;
             pSpritePatternTable = (uint32_t*)&VRAM[(lowValue & 0x04) << 11];
-            DBG_PRINT("command #6 -> sprite pattern table %04X [%02X]\n",
-                (lowValue & 0x04) << 11, lowValue);
+            DBG_PRINT("command #6 -> sprite pattern table %04X [%02X] %d/%d\n",
+                (lowValue & 0x04) << 11, lowValue, TClock, VDPscanLine);
             break;
 
         // Background color
         case 7:
             borderColor = (lowValue & 0x0F) + 16;
-            DBG_PRINT("command #7 -> background color [%02X]\n", lowValue);
+            DBG_PRINT("command #7 -> background color [%02X] %d/%d\n", lowValue, TClock, VDPscanLine);
             break;
 
         // Background horizontal scroll
         case 8:
             horizontalScroll = lowValue;
-            DBG_PRINT("command #8 -> horizontal scroll [%02X]\n", lowValue);
+            DBG_PRINT("command #8 -> horizontal scroll [%02X] %d/%d\n", lowValue, TClock, VDPscanLine);
             break;
 
         // Background vertical scroll
         case 9:
             verticalScroll = lowValue;
-            DBG_PRINT("command #9 -> vertical scroll [%02X]\n", lowValue);
+            DBG_PRINT("command #9 -> vertical scroll [%02X] %d/%d\n", lowValue, TClock, VDPscanLine);
             break;
 
         // Line counter (line interrupt)
         case 10:
             lineIntCounter = lowValue;
-            DBG_PRINT("command #10 -> line counter [%02X]\n", lowValue);
+            DBG_PRINT("command #10 -> line counter [%02X] %d/%d\n", lowValue, TClock, VDPscanLine);
             break;
 
         default:
@@ -316,9 +318,9 @@ void writeVDPCommand(uint8_t value) {
         if (mode == 0x80)
             updateVDPregisters(value);
         else {
-            if (writePal)
+            if (writePal) {
                 DBG_PRINT("CRAM pointer %d\n", pRAM & 0x1F);
-            else
+            } else
                 DBG_PRINT("VRAM pointer %04X %c\n", pRAM, value & 0x40 ? 'W' : 'R');
 
             if (mode == 0x00) {

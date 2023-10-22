@@ -43,9 +43,9 @@ void printOpcodeWithRegisters(int p) {
     t0 = TClock;
 
     update_o_s(p);
-    printf("%04X: %-30s AF:%02X%02X BC:%02X%02X DE:%02X%02X HL:%02X%02X IX:%04X IY:%04X SP:%04X %s %d/%d %d\n",
+    printf("%04X: %-30s AF:%02X%02X BC:%02X%02X DE:%02X%02X HL:%02X%02X IX:%04X IY:%04X SP:%04X %s %03d/%d %d\n",
                 rh[p].rPCx, o_s, rh[p].rAcc, rh[p].Flag & ~0x28, rh[p].B, rh[p].C, rh[p].D, rh[p].E, rh[p].H,
-                rh[p].L, rh[p].rIXx, rh[p].rIYx, rh[p].rSPx, IFF1 ? "EI" : "DI", vdp.scanLine, TClock, t2);
+                rh[p].L, rh[p].rIXx, rh[p].rIYx, rh[p].rSPx, IFF1 ? "EI" : "DI", TClock, VDPscanLine, t2);
 //    sprintf(tmp, "%04X: %d\n", rh[p].rPCx, t2);
 }
 
