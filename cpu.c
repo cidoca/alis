@@ -1667,7 +1667,7 @@ void executeNextOpcode() {
                 // IN r, (C) - 12
                 case 0x40: case 0x48: case 0x50: case 0x58: case 0x60: case 0x68: case 0x78:
                     regs[(opCode1 >> 3) & 7] = readIO(rC);
-                    rFlags = GET_FLAG_SZP(regs[(opCode1 >> 3) & 7]) | (rFlags | FLAG_C);
+                    rFlags = GET_FLAG_SZP(regs[(opCode1 >> 3) & 7]) | (rFlags & FLAG_C);
                     END_OPCODE(2, 12)
 
                 // OUT (C), r - 12
