@@ -9,5 +9,6 @@ extern struct CPU cpu;
 
 void resetCPU();
 void intZ80();
+void intNMI();
 void executeNextOpcode();
 

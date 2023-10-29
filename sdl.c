@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include "cpu.h"
 #include "psg.h"
 #include "ga.h"
 #include "vdp.h"
@@ -77,6 +78,8 @@ void SDLdeinit() {
 }
 
 void mapJoystick() {
+    static uint8_t pauseFF = 0;
+
     joyP1 = joyP2 = 0xFF;
 
     if (keys[SDL_SCANCODE_UP])
@@ -93,7 +96,10 @@ void mapJoystick() {
         joyP1 &= ~0x20;
     if (keys[SDL_SCANCODE_ESCAPE])
         joyP2 &= ~0x10;
-//    if (keys[SDL_SCANCODE_SPACE]) // TODO: missing Z80 NMI logic for pause button
+
+    if (keys[SDL_SCANCODE_SPACE] && !pauseFF)
+        intNMI();
+    pauseFF = keys[SDL_SCANCODE_SPACE];
 
 #ifdef DEBUG
     if (keys[SDL_SCANCODE_F12])

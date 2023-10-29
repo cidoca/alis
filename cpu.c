@@ -103,7 +103,7 @@ struct CPU cpu;
 void resetCPU() {
     memset(&cpu, 0, sizeof(cpu));
     im = 1;
-    rSP = 0xD000;
+    rSP = 0xFFF0;
 }
 
 void intZ80() {
@@ -128,6 +128,22 @@ void intZ80() {
             TClock += 19;
         }
     }
+}
+
+void intNMI() {
+    rR++;
+    IFF1 = 0;
+
+    if (halt) {
+        halt = 0;
+        rPC++;
+    }
+
+    writeMemory(--rSP, rPC >> 8);
+    writeMemory(--rSP, rPC & 0xFF);
+
+    rPC = 0x66;
+    TClock += 11;
 }
 
 void executeNextOpcode() {
@@ -196,7 +212,8 @@ void executeNextOpcode() {
             regs2[7] = tmpA;
             rFlags = rFlags2;
             rFlags2 = tmpFlags;
-            END_OPCODE(1, 4) }
+            END_OPCODE(1, 4)
+        }
 
         // ADD HL, BC - 11 - HNC
         case 0x09: {
@@ -206,7 +223,8 @@ void executeNextOpcode() {
             rH = tmpHL >> 8;
             rL = tmpHL & 0xFF;
             rFlags |= rH & FLAG_XX;
-            END_OPCODE(1, 11) }
+            END_OPCODE(1, 11)
+        }
 
         // LD A, (BC) - 7
         case 0x0A:
@@ -218,7 +236,8 @@ void executeNextOpcode() {
             const unsigned tmpBC = rBC - 1;
             rB = tmpBC >> 8;
             rC = tmpBC & 0xFF;
-            END_OPCODE(1, 6) }
+            END_OPCODE(1, 6)
+        }
 
         // RRCA - 4 - HNC
         case 0x0F:
@@ -258,7 +277,8 @@ void executeNextOpcode() {
             const uint8_t tmpA = rA;
             rA = (rA << 1) | (rFlags & FLAG_C);
             rFlags = (rFlags & (FLAG_S | FLAG_Z | FLAG_PV)) | (rA & FLAG_XX) | (tmpA & 0x80 ? FLAG_C : 0);
-            END_OPCODE(1, 4) }
+            END_OPCODE(1, 4)
+        }
 
         // JR e - 12
         case 0x18:
@@ -272,7 +292,8 @@ void executeNextOpcode() {
             rH = tmpHL >> 8;
             rL = tmpHL & 0xFF;
             rFlags |= rH & FLAG_XX;
-            END_OPCODE(1, 11) }
+            END_OPCODE(1, 11)
+        }
 
         // LD A, (DE) - 7
         case 0x1A:
@@ -284,14 +305,16 @@ void executeNextOpcode() {
             const unsigned tmpDE = rDE - 1;
             rD = tmpDE >> 8;
             rE = tmpDE & 0xFF;
-            END_OPCODE(1, 6) }
+            END_OPCODE(1, 6)
+        }
 
         // RRA - 4 - HNC
         case 0x1F: {
             const uint8_t tmpA = rA;
             rA = (rA >> 1) | (rFlags << 7);
             rFlags = (rFlags & (FLAG_S | FLAG_Z | FLAG_PV)) | (rA & FLAG_XX) | (tmpA & FLAG_C);
-            END_OPCODE(1, 4) }
+            END_OPCODE(1, 4)
+        }
 
         // JR NZ, e - 7/12
         case 0x20:
@@ -312,7 +335,8 @@ void executeNextOpcode() {
             const unsigned addr = (readMemory(rPC + 2) << 8) | readMemory(rPC + 1);
             writeMemory(addr, rL);
             writeMemory(addr + 1, rH);
-            END_OPCODE(3, 16) }
+            END_OPCODE(3, 16)
+        }
 
         // INC HL - 6
         case 0x23:
@@ -330,7 +354,8 @@ void executeNextOpcode() {
             rFlags = GET_FLAG_SZP(tmpA) | ((rA & 0x10) ^ (tmpA & 0x10)) | (rFlags & FLAG_N) |
                      ((rFlags & FLAG_C) || (rA > 0x99) ? FLAG_C : 0);
             rA = tmpA;
-            END_OPCODE(1, 4) }
+            END_OPCODE(1, 4)
+        }
 
         // JR Z, e - 7/12
         case 0x28:
@@ -348,21 +373,24 @@ void executeNextOpcode() {
             rH = tmpHL >> 8;
             rL = tmpHL & 0xFF;
             rFlags |= rH & FLAG_XX;
-            END_OPCODE(1, 11) }
+            END_OPCODE(1, 11)
+        }
 
         // LD HL, (nn) - 16
         case 0x2A: {
             const unsigned addr = (readMemory(rPC + 2) << 8) | readMemory(rPC + 1);
             rL = readMemory(addr);
             rH = readMemory(addr + 1);
-            END_OPCODE(3, 16) }
+            END_OPCODE(3, 16)
+        }
 
         // DEC HL - 6
         case 0x2B: {
             const unsigned tmpHL = rHL - 1;
             rH = tmpHL >> 8;
             rL = tmpHL & 0xFF;
-            END_OPCODE(1, 6) }
+            END_OPCODE(1, 6)
+        }
 
         // CPL - 4 - HN
         case 0x2F:
@@ -400,7 +428,8 @@ void executeNextOpcode() {
             mem++;
             rFlags |= GET_FLAG_SZ(mem) | ((mem & 0x0F) == 0 ? FLAG_H : 0);
             writeMemory(rHL, mem);
-            END_OPCODE(1, 11) }
+            END_OPCODE(1, 11)
+        }
 
         // DEC (HL) - 11 - SZHPN
         case 0x35: {
@@ -409,7 +438,8 @@ void executeNextOpcode() {
             mem--;
             rFlags |= GET_FLAG_SZ(mem) | ((mem & 0x0F) == 15 ? FLAG_H : 0);
             writeMemory(rHL, mem);
-            END_OPCODE(1, 11) }
+            END_OPCODE(1, 11)
+        }
 
         // LD (HL), n - 10
         case 0x36:
@@ -438,7 +468,8 @@ void executeNextOpcode() {
             rH = tmpHL >> 8;
             rL = tmpHL & 0xFF;
             rFlags |= rH & FLAG_XX;
-            END_OPCODE(1, 11) }
+            END_OPCODE(1, 11)
+        }
 
         // LD A, (nn) - 13
         case 0x3A:
@@ -496,7 +527,8 @@ void executeNextOpcode() {
             rFlags = GET_ADD_FLAG_HVNC(mem);
             rA += mem;
             rFlags |= GET_FLAG_SZ(rA);
-            END_OPCODE(1, 7) }
+            END_OPCODE(1, 7)
+        }
 
         // ADC A, r - 4 - SZHPNC
         case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: case 0x8F: {
@@ -504,7 +536,8 @@ void executeNextOpcode() {
             rFlags = GET_ADC_FLAG_HVNC(regs[opCode0 & 7]);
             rA += regs[opCode0 & 7] + (tmpFlags & FLAG_C);
             rFlags |= GET_FLAG_SZ(rA);
-            END_OPCODE(1, 4) }
+            END_OPCODE(1, 4)
+        }
 
         // ADC A, (HL) - 7 - SZHPNC
         case 0x8E: {
@@ -513,7 +546,8 @@ void executeNextOpcode() {
             rFlags = GET_ADC_FLAG_HVNC(mem);
             rA += mem + (tmpFlags & FLAG_C);
             rFlags |= GET_FLAG_SZ(rA);
-            END_OPCODE(1, 7) }
+            END_OPCODE(1, 7)
+        }
 
         // SUB r - 4 - SZHPNC
         case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x97:
@@ -528,7 +562,8 @@ void executeNextOpcode() {
             rFlags = GET_SUB_FLAG_HVNC(mem);
             rA -= mem;
             rFlags |= GET_FLAG_SZ(rA);
-            END_OPCODE(1, 7) }
+            END_OPCODE(1, 7)
+        }
 
         // SBC A, r - 4 - SZHPNC
         case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9F: {
@@ -536,7 +571,8 @@ void executeNextOpcode() {
             rFlags = GET_SBC_FLAG_HVNC(regs[opCode0 & 7]);
             rA -= regs[opCode0 & 7] + (tmpFlags & FLAG_C);
             rFlags |= GET_FLAG_SZ(rA);
-            END_OPCODE(1, 4) }
+            END_OPCODE(1, 4)
+        }
 
         // SBC A, (HL) - 7 - SZHPNC
         case 0x9E: {
@@ -545,7 +581,8 @@ void executeNextOpcode() {
             rFlags = GET_SBC_FLAG_HVNC(mem);
             rA -= mem + (tmpFlags & FLAG_C);
             rFlags |= GET_FLAG_SZ(rA);
-            END_OPCODE(1, 7) }
+            END_OPCODE(1, 7)
+        }
 
         // AND r - 4 - SZHPNC
         case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA7:
@@ -592,7 +629,8 @@ void executeNextOpcode() {
         case 0xBE: {
             const uint8_t mem = readMemory(rHL);
             rFlags = GET_SUB_FLAG_HVNC(mem) | GET_FLAG_SZ(rA - mem);
-            END_OPCODE(1, 7) }
+            END_OPCODE(1, 7)
+        }
 
         // RET NZ - 5/11
         case 0xC0:
@@ -652,7 +690,8 @@ void executeNextOpcode() {
             rFlags = GET_ADD_FLAG_HVNC(imm);
             rA += imm;
             rFlags |= GET_FLAG_SZ(rA);
-            END_OPCODE(2, 7) }
+            END_OPCODE(2, 7)
+        }
 
         // RST p - 11
         case 0xC7: case 0xCF: case 0xD7: case 0xDF: case 0xE7: case 0xEF: case 0xF7: case 0xFF:
@@ -713,7 +752,8 @@ void executeNextOpcode() {
                     mem = (mem << 1) | (mem >> 7);
                     rFlags = GET_FLAG_SZP(mem) | (mem & FLAG_C);
                     writeMemory(rHL, mem);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // RRC r - 8 - SZHPNC
                 case 0x08: case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0F:
@@ -727,14 +767,16 @@ void executeNextOpcode() {
                     mem = (mem >> 1) | (mem << 7);
                     rFlags = GET_FLAG_SZP(mem) | (mem & 0x80 ? FLAG_C : 0);
                     writeMemory(rHL, mem);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // RL r - 8 - SZHPNC
                 case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x17: {
                     const uint8_t reg = regs[opCode1 & 7];
                     regs[opCode1 & 7] = (regs[opCode1 & 7] << 1) | (rFlags & FLAG_C);
                     rFlags = GET_FLAG_SZP(regs[opCode1 & 7]) | (reg >> 7);
-                    END_OPCODE(2, 8) }
+                    END_OPCODE(2, 8)
+                }
 
                 // RL (HL) - 15 - SZHPNC
                 case 0x16: {
@@ -742,14 +784,16 @@ void executeNextOpcode() {
                     byte = (byte << 1) | (rFlags & FLAG_C);
                     rFlags = GET_FLAG_SZP(byte) | (byte2 >> 7);
                     writeMemory(rHL, byte);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // RR r - 8 - SZHPNC
                 case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1F: {
                     const uint8_t reg = regs[opCode1 & 7];
                     regs[opCode1 & 7] = (regs[opCode1 & 7] >> 1) | (rFlags << 7);
                     rFlags = GET_FLAG_SZP(regs[opCode1 & 7]) | (reg & 1);
-                    END_OPCODE(2, 8) }
+                    END_OPCODE(2, 8)
+                }
 
                 // RR (HL) - 15 - SZHPNC
                 case 0x1E:
@@ -773,7 +817,8 @@ void executeNextOpcode() {
                     mem <<= 1;
                     rFlags |= GET_FLAG_SZP(mem);
                     writeMemory(rHL, mem);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // SRA r - 8 - SZHPNC
                 case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2F:
@@ -789,7 +834,8 @@ void executeNextOpcode() {
                     mem = ((int8_t)mem) >> 1;
                     rFlags |= GET_FLAG_SZP(mem);
                     writeMemory(rHL, mem);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // SLL r - 8 - SZHPNC
                 case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x37:
@@ -807,7 +853,8 @@ void executeNextOpcode() {
                     mem++;
                     rFlags |= GET_FLAG_SZP(mem);
                     writeMemory(rHL, mem);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // SRL r - 8 - SZHPNC
                 case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3F:
@@ -823,7 +870,8 @@ void executeNextOpcode() {
                     mem >>= 1;
                     rFlags |= GET_FLAG_SZP(mem);
                     writeMemory(rHL, mem);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // BIT b, r - 8 - ZHN
                 case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x47:
@@ -911,7 +959,8 @@ void executeNextOpcode() {
             rFlags = GET_ADC_FLAG_HVNC(imm);
             rA += imm + (tmpFlags & FLAG_C);
             rFlags |= GET_FLAG_SZ(rA);
-            END_OPCODE(2, 7) }
+            END_OPCODE(2, 7)
+        }
 
         // RET NC - 5/11
         case 0xD0:
@@ -970,7 +1019,8 @@ void executeNextOpcode() {
             rFlags = GET_SUB_FLAG_HVNC(imm);
             rA -= imm;
             rFlags |= GET_FLAG_SZ(rA);
-            END_OPCODE(2, 7) }
+            END_OPCODE(2, 7)
+        }
 
         // RET C - 5/11
         case 0xD8:
@@ -1057,7 +1107,8 @@ void executeNextOpcode() {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     writeMemory(addr, index & 0xFF);
                     writeMemory(addr + 1, index >> 8);
-                    END_OPCODE(4, 20) }
+                    END_OPCODE(4, 20)
+                }
 
                 // INC Ii - 10
                 case 0x23:
@@ -1095,7 +1146,8 @@ void executeNextOpcode() {
                 case 0x2A: {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     index = ((readMemory(addr + 1)) << 8) | readMemory(addr);
-                    END_OPCODE(4, 20) }
+                    END_OPCODE(4, 20)
+                }
 
                 // DEC Ii - 10
                 case 0x2B:
@@ -1129,7 +1181,8 @@ void executeNextOpcode() {
                     mem++;
                     rFlags |= GET_FLAG_SZ(mem) | ((mem & 0x0F) == 0 ? FLAG_H : 0);
                     writeMemory(addr, mem);
-                    END_OPCODE(3, 23) }
+                    END_OPCODE(3, 23)
+                }
 
                 // DEC (Ii+d) - 23 - SZHPN
                 case 0x35: {
@@ -1139,7 +1192,8 @@ void executeNextOpcode() {
                     mem--;
                     rFlags |= GET_FLAG_SZ(mem) | ((mem & 0x0F) == 15 ? FLAG_H : 0);
                     writeMemory(addr, mem);
-                    END_OPCODE(3, 23) }
+                    END_OPCODE(3, 23)
+                }
 
                 // LD (Ii+d), n - 19
                 case 0x36:
@@ -1222,7 +1276,8 @@ void executeNextOpcode() {
                     rFlags = GET_ADD_FLAG_HVNC(mem);
                     rA += mem;
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(3, 19) }
+                    END_OPCODE(3, 19)
+                }
 
                 // ADC A, IiH - 8 - SZHPNC
                 case 0x8C: {
@@ -1230,7 +1285,8 @@ void executeNextOpcode() {
                     rFlags = GET_ADC_FLAG_HVNC(index >> 8);
                     rA += (index >> 8) + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8) }
+                    END_OPCODE(2, 8)
+                }
 
                 // ADC A, IiL - 8 - SZHPNC
                 case 0x8D: {
@@ -1238,7 +1294,8 @@ void executeNextOpcode() {
                     rFlags = GET_ADC_FLAG_HVNC(index & 0xFF);
                     rA += (index & 0xFF) + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8) }
+                    END_OPCODE(2, 8)
+                }
 
                 // ADC A, (Ii+d) - 19 - SZHPNC
                 case 0x8E: {
@@ -1247,7 +1304,8 @@ void executeNextOpcode() {
                     rFlags = GET_ADC_FLAG_HVNC(addr);
                     rA += addr + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(3, 19) }
+                    END_OPCODE(3, 19)
+                }
 
                 // SUB IiH - 8 - SZHPNC
                 case 0x94:
@@ -1269,7 +1327,8 @@ void executeNextOpcode() {
                     rFlags = GET_SUB_FLAG_HVNC(mem);
                     rA -= mem;
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(3, 19) }
+                    END_OPCODE(3, 19)
+                }
 
                 // SBC A, IiH - 8 - SZHPNC
                 case 0x9C: {
@@ -1277,7 +1336,8 @@ void executeNextOpcode() {
                     rFlags = GET_SBC_FLAG_HVNC(index >> 8);
                     rA -= (index >> 8) + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8) }
+                    END_OPCODE(2, 8)
+                }
 
                 // SBC A, IiL - 8 - SZHPNC
                 case 0x9D: {
@@ -1285,7 +1345,8 @@ void executeNextOpcode() {
                     rFlags = GET_SBC_FLAG_HVNC(index & 0xFF);
                     rA -= (index & 0xFF) + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8) }
+                    END_OPCODE(2, 8)
+                }
 
                 // SBC A, (Ii+d) - 19 - SZHPNC
                 case 0x9E: {
@@ -1294,7 +1355,8 @@ void executeNextOpcode() {
                     rFlags = GET_SBC_FLAG_HVNC(addr);
                     rA -= addr + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(3, 19) }
+                    END_OPCODE(3, 19)
+                }
 
                 // AND IiH - 8 - SZHPNC
                 case 0xA4:
@@ -1354,19 +1416,22 @@ void executeNextOpcode() {
                 case 0xBC: {
                     const uint8_t IiH = index >> 8;
                     rFlags = GET_SUB_FLAG_HVNC(IiH) | GET_FLAG_SZ(rA - IiH);
-                    END_OPCODE(2, 8) }
+                    END_OPCODE(2, 8)
+                }
 
                 // CP IiL - 8 - SZHPNC
                 case 0xBD: {
                     const uint8_t IiL = index & 0xFF;
                     rFlags = GET_SUB_FLAG_HVNC(IiL) | GET_FLAG_SZ(rA - IiL);
-                    END_OPCODE(2, 8) }
+                    END_OPCODE(2, 8)
+                }
 
                 // CP (Ii+d) - 19 - SZHPNC
                 case 0xBE: {
                     const uint8_t mem = readMemory(index + (int8_t)readMemory(rPC + 2));
                     rFlags = GET_SUB_FLAG_HVNC(mem) | GET_FLAG_SZ(rA - mem);
-                    END_OPCODE(3, 19) }
+                    END_OPCODE(3, 19)
+                }
 
                 // Prefix DD/FD CB
                 case 0xCB: {
@@ -1481,12 +1546,6 @@ void executeNextOpcode() {
                     break;
                 }
 
-                // Prefix DD/FD again
-                case 0xDD: case 0xFD:
-                    rPC++;
-                    TClock += 4;
-                    return;
-
                 // POP Ii - 14
                 case 0xE1:
                     index = readMemory(rSP++);
@@ -1499,7 +1558,8 @@ void executeNextOpcode() {
                     writeMemory(rSP, index & 0xFF);
                     writeMemory(rSP + 1, index >> 8);
                     index = mem;
-                    END_OPCODE(2, 23) }
+                    END_OPCODE(2, 23)
+                }
 
                 // PUSH Ii - 15
                 case 0xE5:
@@ -1518,12 +1578,11 @@ void executeNextOpcode() {
                     rSP = index;
                     END_OPCODE(2, 10)
 
-                // Not implemented yet
+                // Basic instruction
                 default:
-                    DBG_PRINT_HISTORY
-                    printf("Opcode %02X %02X not implemented !!!\n", opCode0, opCode1);
-                    END_OPCODE(2, 8);
-//                    exit(1);
+                    rPC++;
+                    TClock += 4;
+                    return;
             }
 
             if (opCode0 & 0x20)
@@ -1540,7 +1599,8 @@ void executeNextOpcode() {
             rFlags = GET_SBC_FLAG_HVNC(imm);
             rA -= imm + (tmpFlags & FLAG_C);
             rFlags |= GET_FLAG_SZ(rA);
-            END_OPCODE(2, 7) }
+            END_OPCODE(2, 7)
+        }
 
         // RET PO - 5/11
         case 0xE0:
@@ -1577,7 +1637,8 @@ void executeNextOpcode() {
             const uint8_t tmpH = rH;
             rH = readMemory(rSP + 1);
             writeMemory(rSP + 1, tmpH);
-            END_OPCODE(1, 19) }
+            END_OPCODE(1, 19)
+        }
 
         // CALL PO - 10/17
         case 0xE4:
@@ -1639,7 +1700,8 @@ void executeNextOpcode() {
             rE = rL;
             rH = tmpD;
             rL = tmpE;
-            END_OPCODE(1, 4) }
+            END_OPCODE(1, 4)
+        }
 
         // CALL PE - 10/17
         case 0xEC:
@@ -1683,14 +1745,16 @@ void executeNextOpcode() {
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
                     rFlags |= (rH & (FLAG_S | FLAG_XX)) | (tmpHL == 0 ? FLAG_Z : 0);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // LD (nn), BC - 20
                 case 0x43: {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     writeMemory(addr, rC);
                     writeMemory(addr + 1, rB);
-                    END_OPCODE(4, 20) }
+                    END_OPCODE(4, 20)
+                }
 
                 // NEG - 8 - SZHPNC
                 case 0x44:
@@ -1728,14 +1792,16 @@ void executeNextOpcode() {
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
                     rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // LD BC, (nn) - 20
                 case 0x4B: {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     rC = readMemory(addr);
                     rB = readMemory(addr + 1);
-                    END_OPCODE(4, 20) }
+                    END_OPCODE(4, 20)
+                }
 
                 // RETI - 14
                 case 0x4D:
@@ -1758,14 +1824,16 @@ void executeNextOpcode() {
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
                     rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // LD (nn), DE - 20
                 case 0x53: {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     writeMemory(addr, rE);
                     writeMemory(addr + 1, rD);
-                    END_OPCODE(4, 20) }
+                    END_OPCODE(4, 20)
+                }
 
                 // IM 1 - 8
                 case 0x56:
@@ -1786,14 +1854,16 @@ void executeNextOpcode() {
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
                     rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // LD DE, (nn) - 20
                 case 0x5B: {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     rE = readMemory(addr);
                     rD = readMemory(addr + 1);
-                    END_OPCODE(4, 20) }
+                    END_OPCODE(4, 20)
+                }
 
                 // IM 2 - 8
                 case 0x5E:
@@ -1814,14 +1884,16 @@ void executeNextOpcode() {
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
                     rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // LD (nn), HL - 20
                 case 0x63: {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     writeMemory(addr, rL);
                     writeMemory(addr + 1, rH);
-                    END_OPCODE(4, 20) }
+                    END_OPCODE(4, 20)
+                }
 
                 // RRD - 18 - SZHPN
                 case 0x67: {
@@ -1830,7 +1902,8 @@ void executeNextOpcode() {
                     rA = (rA & 0xF0) | (mem & 0xF);
                     writeMemory(rHL, byte);
                     rFlags = GET_FLAG_SZP(rA) | (rFlags & FLAG_C);
-                    END_OPCODE(2, 18) }
+                    END_OPCODE(2, 18)
+                }
 
                 // ADC HL, HL - 15 - SZHPNC
                 case 0x6A: {
@@ -1840,14 +1913,16 @@ void executeNextOpcode() {
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
                     rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // LD HL, (nn) - 20
                 case 0x6B: {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     rL = readMemory(addr);
                     rH = readMemory(addr + 1);
-                    END_OPCODE(4, 20) }
+                    END_OPCODE(4, 20)
+                }
 
                 // RLD - 18 - SZHPN
                 case 0x6F: {
@@ -1856,7 +1931,8 @@ void executeNextOpcode() {
                     rA = (rA & 0xF0) | (mem >> 4);
                     writeMemory(rHL, byte);
                     rFlags = GET_FLAG_SZP(rA) | (rFlags & FLAG_C);
-                    END_OPCODE(2, 18) }
+                    END_OPCODE(2, 18)
+                }
 
                 // SBC HL, SP - 15
                 case 0x72: {
@@ -1866,14 +1942,16 @@ void executeNextOpcode() {
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
                     rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // LD (nn), SP - 20
                 case 0x73: {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     writeMemory(addr, rSP & 0xFF);
                     writeMemory(addr + 1, rSP >> 8);
-                    END_OPCODE(4, 20) }
+                    END_OPCODE(4, 20)
+                }
 
                 // ADC HL, SP - 15 - SZHPNC
                 case 0x7A: {
@@ -1883,13 +1961,15 @@ void executeNextOpcode() {
                     rH = tmpHL >> 8;
                     rL = tmpHL & 0xFF;
                     rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
-                    END_OPCODE(2, 15) }
+                    END_OPCODE(2, 15)
+                }
 
                 // LD SP, (nn) - 20
                 case 0x7B: {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     rSP = ((readMemory(addr + 1)) << 8) | readMemory(addr);
-                    END_OPCODE(4, 20) }
+                    END_OPCODE(4, 20)
+                }
 
                 // LDI - 16 - HPN
                 case 0xA0: {
@@ -1905,7 +1985,8 @@ void executeNextOpcode() {
                         rFlags |= FLAG_PV;
                     rB = tmpBC >> 8;
                     rC = tmpBC & 0xFF;
-                    END_OPCODE(2, 16) }
+                    END_OPCODE(2, 16)
+                }
 
                 // CPI - 16 - SZHPN
                 case 0xA1: {
@@ -1918,7 +1999,8 @@ void executeNextOpcode() {
                         rFlags |= FLAG_PV;
                     rB = tmpBC >> 8;
                     rC = tmpBC & 0xFF;
-                    END_OPCODE(2, 16) }
+                    END_OPCODE(2, 16)
+                }
 
                 // INI - 16 - ZN
                 case 0xA2:
@@ -1954,7 +2036,8 @@ void executeNextOpcode() {
                         rFlags |= FLAG_PV;
                     rB = tmp >> 8;
                     rC = tmp & 0xFF;
-                    END_OPCODE(2, 16) }
+                    END_OPCODE(2, 16)
+                }
 
                 // CPD - 16 - SZHPN
                 case 0xA9: {
@@ -1968,7 +2051,8 @@ void executeNextOpcode() {
                         rFlags |= FLAG_PV;
                     rB = tmp >> 8;
                     rC = tmp & 0xFF;
-                    END_OPCODE(2, 16) }
+                    END_OPCODE(2, 16)
+                }
 
                 // IND - 16 - ZN
                 case 0xAA:
@@ -2007,11 +2091,11 @@ void executeNextOpcode() {
                     if (tmp == 0) {
                         END_OPCODE(2, 16)
                     } else {
-                        // rR++;
                         rFlags |= FLAG_PV;
                         TClock += 21;
                         break;
-                    } }
+                    }
+                }
 
                 // CPIR - 16/21 - SZHPN
                 case 0xB1: {
@@ -2030,7 +2114,8 @@ void executeNextOpcode() {
                     } else {
                         TClock += 21;
                         break;
-                    } }
+                    }
+                }
 
                 // INIR - 16/21 - ZN
                 case 0xB2:
@@ -2084,7 +2169,8 @@ void executeNextOpcode() {
                         rFlags |= FLAG_PV;
                         TClock += 21;
                         break;
-                    } }
+                    }
+                }
 
                 // CPDR - 16/21 - SZHPN
                 case 0xB9: {
@@ -2103,7 +2189,8 @@ void executeNextOpcode() {
                     } else {
                         TClock += 21;
                         break;
-                    } }
+                    }
+                }
 
                 // INDR - 16/21 - ZN
                 case 0xBA:
@@ -2261,6 +2348,7 @@ void executeNextOpcode() {
         case 0xFE: {
             const uint8_t imm = readMemory(rPC + 1);
             rFlags = GET_SUB_FLAG_HVNC(imm) | GET_FLAG_SZ(rA - imm);
-            END_OPCODE(2, 7) }
+            END_OPCODE(2, 7)
+        }
     }
 }
