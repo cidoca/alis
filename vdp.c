@@ -14,6 +14,7 @@
 #define writePal            vdp.writePal
 #define dataBuffer          vdp.dataBuffer
 #define status              vdp.status
+#define spriteSize          vdp.spriteSize
 #define lineInt             vdp.lineInt
 
 #define VDP0                vdp.VDP0
@@ -75,12 +76,76 @@ uint32_t *drawBlankLine(uint32_t *frameBuffer) {
     return frameBuffer;
 }
 
+uint32_t spritePattern[8];
+uint8_t spritePos[8], spriteCount;
+
+void searchSprites() {
+    spriteCount = 0;
+    for (int i = 0; i < 64 && pSpriteAttrTable[i] != 0xD0; i++) {
+        uint8_t line = VDPscanLine - pSpriteAttrTable[i] - 1;
+        if (line < spriteSize) {
+            if (spriteCount < 8) {
+                uint8_t index = pSpriteAttrTable[128 + 2 * i + 1];
+                if (VDP1 & VDP1_SIZE)
+                    index &= 0xFE;
+                if (VDP1 & VDP1_MAG)
+                    line >>= 1;
+                spritePos[spriteCount] = pSpriteAttrTable[128 + 2 * i];
+                spritePattern[spriteCount++] = pSpritePatternTable[index * 8 + line];
+            } else {
+                status |= STATUS_OVR;
+                break;
+            }
+        }
+    }
+}
+
+uint8_t nextSpritePixel(int sprite) {
+    uint8_t pixel = 0;
+
+    if (spritePos[sprite] > 0)
+        spritePos[sprite]--;
+    else if (spritePattern[sprite]) {
+        uint32_t tmp, index = (spritePattern[sprite] & 0x80808080) >> 7;
+        spritePattern[sprite] = (spritePattern[sprite] & 0x7F7F7F7F) << 1;
+        tmp = index >> 7;
+        index |= tmp;
+        tmp >>= 7;
+        index |= tmp;
+        tmp >>= 7;
+        pixel = (index | tmp) & 0xF;
+    }
+
+   return pixel;
+}
+
+uint8_t nextSpritesPixel() {
+    uint8_t pixels[8], count = 0;
+
+    for (int i = 0; i < spriteCount; i++) {
+        pixels[i] = nextSpritePixel(i);
+        if (pixels[i])
+            count++;
+    }
+
+    if (count > 1)
+        status |= STATUS_COL;
+
+    for (int i = 0; i < spriteCount; i++)
+        if (pixels[i])
+            return pixels[i];
+
+    return 0;
+}
+
 uint32_t *drawScanLine(uint32_t *frameBuffer) {
     uint32_t index, tmp, scanLineScrolled = VDPscanLine + verticalScroll;
     uint8_t col = VDP0 & VDP0_HSCROLL && VDPscanLine < 16 ? 0 : horizontalScroll;
 
     if (scanLineScrolled >= 224)
         scanLineScrolled -= 224;
+
+    searchSprites();
 
     uint16_t *pName = pNameTable + (scanLineScrolled / 8 * 32);
     for (int i = 0; i < 32; i++) {
@@ -97,7 +162,7 @@ uint32_t *drawScanLine(uint32_t *frameBuffer) {
 
         for (int j = 0; j < 8; j++) {
             if (name & TILE_HFLIP) {
-                index = (pattern & 0x01010101);
+                index = pattern & 0x01010101;
                 pattern >>= 1;
             } else {
                 index = (pattern & 0x80808080) >> 7;
@@ -112,6 +177,12 @@ uint32_t *drawScanLine(uint32_t *frameBuffer) {
             index |= tmp;
             frameBuffer[col++] = pCRAM[index & 0xF];
         }
+    }
+
+    for (int i = 0; i < 256; i++) {
+        uint8_t pixel = nextSpritesPixel();
+        if (pixel)
+            frameBuffer[i] = CRAM[pixel + 16];
     }
 
     if (VDP0 & VDP0_HIDECOL)
@@ -165,10 +236,10 @@ void renderFrame(uint32_t *frameBuffer) {
         cpu.TClock -= 228;
 
         VDPscanLine++;
-        if (VDPscanLine == 193)
-            status |= STATUS_INT;
         if (VDPscanLine == 0)
             lineCounter = lineIntCounter;
+        else if (VDPscanLine == 193)
+            status |= STATUS_INT;
         if (VDPscanLine >= 0 && VDPscanLine < 193) {
             if (!lineCounter) {
                 lineInt = 1;
@@ -240,6 +311,12 @@ void updateVDPregisters(uint8_t value) {
         // Mode control 2
         case 1:
             VDP1 = lowValue;
+            if ((lowValue & (VDP1_SIZE | VDP1_MAG)) == (VDP1_SIZE | VDP1_MAG))
+                spriteSize = 32;
+            else if (lowValue & (VDP1_SIZE | VDP1_MAG))
+                spriteSize = 16;
+            else
+                spriteSize = 8;
             DBG_PRINT("command #1 -> BL:%d IE0:%d M1:%d M3:%d SIZE:%d MAG:%d [%02X] %d/%d\n",
                 VDP1 & 0x40 ? 1 : 0, VDP1 & 0x20 ? 1 : 0, VDP1 & 0x10 ? 1 : 0, VDP1 & 0x08 ? 1 : 0,
                 VDP1 & 0x02 ? 1 : 0, VDP1 & 0x01, VDP1, cpu.TClock, VDPscanLine);
