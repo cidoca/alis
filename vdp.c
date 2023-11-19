@@ -90,8 +90,19 @@ void searchSprites() {
                     index &= 0xFE;
                 if (VDP1 & VDP1_MAG)
                     line >>= 1;
-                spritePos[spriteCount] = pSpriteAttrTable[128 + 2 * i];
-                spritePattern[spriteCount++] = pSpritePatternTable[index * 8 + line];
+
+                int x = pSpriteAttrTable[128 + 2 * i];
+                uint32_t pattern = pSpritePatternTable[index * 8 + line];
+                if (VDP0 & VDP0_SHIFTSPR) {
+                    x = x - 8;
+                    while (x < 0) {
+                        pattern = (pattern & 0x7F7F7F7F) << 1;
+                        x++;
+                    }
+                }
+
+                spritePos[spriteCount] = x;
+                spritePattern[spriteCount++] = pattern;
             } else {
                 status |= STATUS_OVR;
                 break;
