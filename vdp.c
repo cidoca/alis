@@ -48,7 +48,7 @@
 #define VDP1_MAG            0x01
 
 struct VDP vdp;
-int VDPscanLine;
+int VDPscanLine, PALmode = 0;
 uint8_t *pSpriteAttrTable = VRAM;
 uint16_t *pNameTable = (uint16_t*)VRAM;
 uint32_t *pSpritePatternTable = (uint32_t*)VRAM;
@@ -229,9 +229,10 @@ void drawTiles(uint32_t *frameBuffer) {
 
 void renderFrame(uint32_t *frameBuffer) {
     uint8_t lineCounter;
+    int firstScanLine = PALmode ? -70 : -43, scanLines = PALmode ? 313 : 262;
 
-    VDPscanLine = -43;
-    while (VDPscanLine < 262 - 43) {
+    VDPscanLine = firstScanLine;
+    while (VDPscanLine < scanLines + firstScanLine) {
         if (VDPscanLine >= 0 && VDPscanLine < 192) {
             if (VDP1 & VDP1_BLK)
                 frameBuffer = drawScanLine(frameBuffer);

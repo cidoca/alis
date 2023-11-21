@@ -1,12 +1,47 @@
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include "cpu.h"
 #include "memory.h"
 #include "vdp.h"
 #include "psg.h"
 #include "sdl.h"
 
+void printHelp() {
+    printf("Usage: alis [options] <rom file>\n"
+           "Options:\n"
+           "  -h        Display this information\n"
+           "  --pal     PAL mode\n"
+//           "  --ftdi    Send VDP data directly to an external VDP/FPGA\n"
+    );
+    exit(1);
+}
+
+void parserCmdLine(int argc, char **argv) {
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "-h")) {
+            printHelp();
+        } else if (!strcmp(argv[i], "--pal")) {
+            PALmode = 1;
+//        } else if (!strcmp(argv[i], "--ftdi")) {
+//            FTDIenabled = 1;
+        } else if (argv[i][0] == '-') {
+            printf("** Command line option '%s' not valid! **\n", argv[i]);
+            printHelp();
+        } else if (!ROMfilename[0]) {
+            strncpy(ROMfilename, argv[i], sizeof(ROMfilename) - 1);
+        }
+    }
+
+    if (!ROMfilename[0])
+        printHelp();
+}
+
 int main(int argc, char **argv) {
-    loadROM(argv[1]);
+    parserCmdLine(argc, argv);
+
+    loadROM();
 
     resetCPU();
     resetVDP();

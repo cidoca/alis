@@ -9,7 +9,7 @@ struct VDP {
 };
 
 extern struct VDP vdp;
-extern int VDPscanLine;
+extern int VDPscanLine, PALmode;
 
 void resetVDP();
 void renderFrame(uint32_t *frameBuffer);

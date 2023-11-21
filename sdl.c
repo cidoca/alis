@@ -131,7 +131,10 @@ void SDLmainLoop() {
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
 
-        t += (tf++ % 3 == 0) ? 16 : 17;
+        if (PALmode)
+            t += 20;                        // 50 Hz
+        else
+            t += (tf++ % 3 == 0) ? 16 : 17; // 60 Hz
         tc = SDL_GetTicks();
         if (t > tc)
             SDL_Delay(t - tc);

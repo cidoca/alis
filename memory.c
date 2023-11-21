@@ -21,6 +21,7 @@
 struct MEMORY mem;
 uint8_t ROM[1024 * 1024];
 uint8_t *pBank0 = ROM, *pBank1 = ROM, *pBank2 = ROM, *pBank2ROM = ROM;
+char ROMfilename[128] = "";
 
 const uint8_t readMemory(unsigned address) {
     if (address < 0x0400)
@@ -80,15 +81,15 @@ void writeMemory(unsigned address, uint8_t value) {
     }
 }
 
-void loadROM(const char *fileName) {
+void loadROM() {
     int fd;
     ssize_t size;
     struct stat buf;
 
-    printf("Loading ROM \"%s\" ", fileName);
+    printf("Loading ROM \"%s\" ", ROMfilename);
     fflush(stdout);
 
-    fd = open(fileName, O_RDONLY);
+    fd = open(ROMfilename, O_RDONLY);
     if (fd == -1 || fstat(fd, &buf)) {
         printf("- ERROR: could not open!!!!\n");
         exit(1);
