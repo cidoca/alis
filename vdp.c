@@ -150,57 +150,63 @@ uint8_t nextSpritesPixel() {
 }
 
 uint32_t *drawScanLine(uint32_t *frameBuffer) {
-    uint32_t index, tmp, scanLineScrolled = VDPscanLine + verticalScroll;
-    uint8_t col = VDP0 & VDP0_HSCROLL && VDPscanLine < 16 ? 0 : horizontalScroll;
+    uint32_t *pPattern, pattern, name, tile = 0;
+    uint32_t scanLineScrolled = VDPscanLine + verticalScroll;
+    int hScroll = (VDP0 & VDP0_HSCROLL) && VDPscanLine < 16 ? 0 : horizontalScroll;
+    int fine = hScroll % 8, column = 32 - hScroll / 8, step = 0;
 
+    searchSprites();
     if (scanLineScrolled >= 224)
         scanLineScrolled -= 224;
 
-    searchSprites();
-
     uint16_t *pName = pNameTable + (scanLineScrolled / 8 * 32);
-    for (int i = 0; i < 32; i++) {
-        unsigned name = *pName++;
-        uint32_t *pCRAM = &CRAM[name & TILE_PALETTE ? 16 : 0];
-        uint32_t *pPattern = (uint32_t*)&VRAM[(name & 0x1FF) * 32];
-        uint32_t pattern = name & TILE_VFLIP ? pPattern[7 - (scanLineScrolled % 8)] :
-            pPattern[scanLineScrolled % 8];
 
-        if (i == 23 && VDP0 & VDP0_VSCROLL) {
+    for (int i = 0; i < 256; i++) {
+        uint8_t sprite = nextSpritesPixel();
+
+        if (i == 24 * 8 && (VDP0 & VDP0_VSCROLL)) {
             scanLineScrolled = VDPscanLine;
-            pName = pNameTable + (VDPscanLine / 8 * 32) + 24;
+            pName = pNameTable + (VDPscanLine / 8 * 32);
         }
 
-        for (int j = 0; j < 8; j++) {
+        if (fine > 0)
+            fine--;
+        else {
+            if (!step) {
+                step = 8;
+                name = pName[(column++) % 32];
+                pPattern = (uint32_t*)&VRAM[(name & 0x1FF) * 32];
+                pattern = name & TILE_VFLIP ? pPattern[7 - (scanLineScrolled % 8)] :
+                    pPattern[scanLineScrolled % 8];
+            }
+
             if (name & TILE_HFLIP) {
-                index = pattern & 0x01010101;
+                tile = pattern & 0x01010101;
                 pattern >>= 1;
             } else {
-                index = (pattern & 0x80808080) >> 7;
+                tile = (pattern & 0x80808080) >> 7;
                 pattern <<= 1;
             }
 
-            tmp = index >> 7;
-            index |= tmp;
+            uint32_t tmp = tile >> 7;
+            tile |= tmp;
             tmp >>= 7;
-            index |= tmp;
+            tile |= tmp;
             tmp >>= 7;
-            index |= tmp;
-            frameBuffer[col++] = pCRAM[index & 0xF];
+            tile = (tile | tmp) & 0xF;
+
+            step--;
         }
+
+        if (i < 8 && (VDP0 & VDP0_HIDECOL))
+            *frameBuffer++ = CRAM[borderColor];
+        else if (sprite && (!(name & TILE_PRIORITY) || ((name & TILE_PRIORITY) && !tile)))
+            *frameBuffer++ = CRAM[sprite + 16];
+        else
+            *frameBuffer++ = CRAM[tile + (name & TILE_PALETTE ? 16 : 0)];
     }
 
-    for (int i = 0; i < 256; i++) {
-        uint8_t pixel = nextSpritesPixel();
-        if (pixel)
-            frameBuffer[i] = CRAM[pixel + 16];
-    }
-
-    if (VDP0 & VDP0_HIDECOL)
-        for (int i = 0; i < 8; i++)
-            frameBuffer[i] = CRAM[borderColor];
-
-    return frameBuffer + 256;
+    return frameBuffer;
 }
 
 #ifdef DRAW_TILES
