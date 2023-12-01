@@ -3,6 +3,7 @@
 #include "vdp.h"
 #include "cpu.h"
 #include "log.h"
+#include "ftdi.h"
 
 #define DBG_TITLE "\033[1;33mVDP:\033[0m "
 
@@ -255,8 +256,13 @@ void renderFrame(uint32_t *frameBuffer) {
         VDPscanLine++;
         if (VDPscanLine == 0)
             lineCounter = lineIntCounter;
-        else if (VDPscanLine == 193)
+        else if (VDPscanLine == 193) {
             status |= STATUS_INT;
+#ifdef DRAW_TILES
+            drawTiles(frameBuffer);
+#endif
+            FTDI_FlushBuffer();
+        }
         if (VDPscanLine >= 0 && VDPscanLine < 193) {
             if (!lineCounter) {
                 lineInt = 1;
@@ -266,9 +272,6 @@ void renderFrame(uint32_t *frameBuffer) {
         }
     }
 
-#ifdef DRAW_TILES
-    drawTiles(frameBuffer);
-#endif
 }
 
 uint8_t readVDPVertical() {
@@ -420,6 +423,8 @@ void writeVDPCommand(uint8_t value) {
             if (mode == 0x00) {
                 dataBuffer = VRAM[pRAM];
                 pRAM = (pRAM + 1) & 0x3FFF;
+                for (int i = 0; i < 8; i++)
+                    FTDI_WriteBuffer(0x40, 0);
             }
         }
     } else {

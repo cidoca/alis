@@ -15,6 +15,7 @@ endif
 
 ifdef FTDI
     CFLAGS+=-DFTDI
+    OBJECTS+=ftdi.o
     LIBS+=ftdi/libftd2xx.a
 endif
 
@@ -22,7 +23,7 @@ $(TARGET): $(OBJECTS)
 	@echo Linking executable $@
 	@$(CC) $(LFLAGS) -o $@ $(OBJECTS) $(LIBS)
 
-main.o: main.c cpu.h memory.h vdp.h psg.h sdl.h
+main.o: main.c cpu.h memory.h vdp.h psg.h sdl.h ftdi.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
@@ -30,7 +31,7 @@ cpu.o: cpu.c cpu.h io.h memory.h log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-io.o: io.c vdp.h psg.h ga.h log.h
+io.o: io.c vdp.h psg.h ga.h log.h ftdi.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
@@ -38,7 +39,7 @@ memory.o: memory.c log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-vdp.o: vdp.c vdp.h cpu.h log.h
+vdp.o: vdp.c vdp.h cpu.h log.h ftdi.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
@@ -55,6 +56,10 @@ sdl.o: sdl.c cpu.h psg.h vdp.h ga.h log.h
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 log.o: log.c cpu.h vdp.h memory.h
+	@echo Compiling $<
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+ftdi.o: ftdi.c
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 

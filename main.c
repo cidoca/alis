@@ -7,6 +7,7 @@
 #include "vdp.h"
 #include "psg.h"
 #include "sdl.h"
+#include "ftdi.h"
 
 void printHelp() {
     printf("Usage: alis [options] <rom file>\n"
@@ -14,7 +15,9 @@ void printHelp() {
            "  -h            Display this information\n"
            "  --pal         PAL mode\n"
            "  --sprites     Show up to %d sprites per scanline\n"
-//           "  --ftdi    Send VDP data directly to an external VDP/FPGA\n"
+#ifdef FTDI
+           "  --ftdi        Send VDP data directly to an external VDP/FPGA\n"
+#endif
         , MAX_SPRITES);
     exit(1);
 }
@@ -27,8 +30,10 @@ void parserCmdLine(int argc, char **argv) {
             PALmode = 1;
         } else if (!strcmp(argv[i], "--sprites")) {
             VDPmaxSprites = MAX_SPRITES;
-//        } else if (!strcmp(argv[i], "--ftdi")) {
-//            FTDIenabled = 1;
+#ifdef FTDI
+        } else if (!strcmp(argv[i], "--ftdi")) {
+            FTDI_Enabled();
+#endif
         } else if (argv[i][0] == '-') {
             printf("** Command line option '%s' not valid! **\n", argv[i]);
             printHelp();
@@ -45,6 +50,7 @@ int main(int argc, char **argv) {
     parserCmdLine(argc, argv);
 
     loadROM();
+    FTDI_Open();
 
     resetCPU();
     resetVDP();
@@ -53,6 +59,8 @@ int main(int argc, char **argv) {
     SDLinit();
     SDLmainLoop();
     SDLdeinit();
+
+    FTDI_Close();
 
     return 0;
 }
