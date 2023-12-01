@@ -48,10 +48,10 @@
 #define VDP1_MAG            0x01
 
 struct VDP vdp;
-int VDPscanLine, PALmode = 0;
-uint8_t *pSpriteAttrTable = VRAM;
 uint16_t *pNameTable = (uint16_t*)VRAM;
-uint32_t *pSpritePatternTable = (uint32_t*)VRAM;
+int VDPscanLine, VDPmaxSprites = 8, PALmode = 0;
+uint8_t *pSpriteAttrTable = VRAM, spritePos[MAX_SPRITES], spriteCount;
+uint32_t spritePattern[MAX_SPRITES], *pSpritePatternTable = (uint32_t*)VRAM;
 uint32_t VDPpalette[64] = {
     0x000000, 0x550000, 0xAA0000, 0xFF0000, 0x005500, 0x555500, 0xAA5500, 0xFF5500,
     0x00AA00, 0x55AA00, 0xAAAA00, 0xFFAA00, 0x00FF00, 0x55FF00, 0xAAFF00, 0xFFFF00,
@@ -76,15 +76,16 @@ uint32_t *drawBlankLine(uint32_t *frameBuffer) {
     return frameBuffer;
 }
 
-uint32_t spritePattern[8];
-uint8_t spritePos[8], spriteCount;
 
 void searchSprites() {
     spriteCount = 0;
     for (int i = 0; i < 64 && pSpriteAttrTable[i] != 0xD0; i++) {
         uint8_t line = VDPscanLine - pSpriteAttrTable[i] - 1;
         if (line < spriteSize) {
-            if (spriteCount < 8) {
+            if (spriteCount == 8)
+                status |= STATUS_OVR;
+
+            if (spriteCount < VDPmaxSprites) {
                 uint8_t index = pSpriteAttrTable[128 + 2 * i + 1];
                 if (VDP1 & VDP1_SIZE)
                     index &= 0xFE;
@@ -103,10 +104,8 @@ void searchSprites() {
 
                 spritePos[spriteCount] = x;
                 spritePattern[spriteCount++] = pattern;
-            } else {
-                status |= STATUS_OVR;
+            } else
                 break;
-            }
         }
     }
 }
@@ -131,11 +130,11 @@ uint8_t nextSpritePixel(int sprite) {
 }
 
 uint8_t nextSpritesPixel() {
-    uint8_t pixels[8], count = 0;
+    uint8_t pixels[MAX_SPRITES], count = 0;
 
     for (int i = 0; i < spriteCount; i++) {
         pixels[i] = nextSpritePixel(i);
-        if (pixels[i])
+        if (i < 8 && pixels[i])
             count++;
     }
 

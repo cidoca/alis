@@ -11,10 +11,11 @@
 void printHelp() {
     printf("Usage: alis [options] <rom file>\n"
            "Options:\n"
-           "  -h        Display this information\n"
-           "  --pal     PAL mode\n"
+           "  -h            Display this information\n"
+           "  --pal         PAL mode\n"
+           "  --sprites     Show up to %d sprites per scanline\n"
 //           "  --ftdi    Send VDP data directly to an external VDP/FPGA\n"
-    );
+        , MAX_SPRITES);
     exit(1);
 }
 
@@ -24,6 +25,8 @@ void parserCmdLine(int argc, char **argv) {
             printHelp();
         } else if (!strcmp(argv[i], "--pal")) {
             PALmode = 1;
+        } else if (!strcmp(argv[i], "--sprites")) {
+            VDPmaxSprites = MAX_SPRITES;
 //        } else if (!strcmp(argv[i], "--ftdi")) {
 //            FTDIenabled = 1;
         } else if (argv[i][0] == '-') {

@@ -1,4 +1,5 @@
 //#define DRAW_TILES
+#define MAX_SPRITES         32
 
 struct VDP {
     uint8_t VRAM[16 * 1024];
@@ -9,7 +10,7 @@ struct VDP {
 };
 
 extern struct VDP vdp;
-extern int VDPscanLine, PALmode;
+extern int VDPscanLine, VDPmaxSprites, PALmode;
 
 void resetVDP();
 void renderFrame(uint32_t *frameBuffer);
