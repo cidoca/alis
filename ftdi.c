@@ -154,8 +154,6 @@ void FTDI_WriteBuffer(uint8_t mode, uint8_t value) {
         *pBuffer++ = value;
         *pBuffer++ = value;
         *pBuffer++ = value;
-        if (pBuffer - cmdBuffer > 32700)
-            printf("##### Katia Flavia ######\n");
     }
 }
 

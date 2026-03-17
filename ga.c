@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include "log.h"
 
+#undef DBG_PRINT
+#define DBG_PRINT(f, ...) {}
 #define DBG_TITLE "\033[1;35mGA:\033[0m "
 
 uint8_t nationalization = 0x00, joyP1 = 0xFF, joyP2 = 0xFF;

@@ -76,7 +76,6 @@ void dumpOpcode() {
 
 //    if (cpu.rPC == 0xDE01)
 //       dumping = 1;
-//        printf("#### PORRRAAAA #####\n");
 
     if (dumping)
 //    if ((rPC >= 0x4000 && rPC < 0x8000 && (PPIportA & 0x0C) == 0x04) ||

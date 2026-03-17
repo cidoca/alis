@@ -8,6 +8,8 @@
 #include "memory.h"
 #include "log.h"
 
+#undef DBG_PRINT
+#define DBG_PRINT(f, ...) {}
 #define DBG_TITLE "\033[1;34mMEMORY:\033[0m "
 
 #define RAM         mem.RAM

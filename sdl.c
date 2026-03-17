@@ -123,7 +123,6 @@ void SDLmainLoop() {
                 done = 1;
         }
 
-//        printf("** NEW FRAME **\n");
         mapJoystick();
         SDL_LockTexture(texture, NULL, &frameBuffer, &pitch);
         renderFrame(frameBuffer);

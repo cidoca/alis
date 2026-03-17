@@ -38,27 +38,35 @@ void writePSG(uint8_t value) {
     if (value & 0x80) {                 // First write
         last = (value >> 4) & 7;
         channel = last >> 1;
-        if (value & 0x10)               // Attenuation
+        if (value & 0x10) {              // Attenuation
             attenuation[channel] = (~value) & 0xF;
-        else if (channel < 3)       // Tone frequency
+            DBG_PRINT("CH: %d VOL: %d\n", channel,  attenuation[channel]);
+        } else if (channel < 3) {       // Tone frequency
             frequency[channel] = (frequency[channel] & 0x3F0) | (value & 0xF);
-        else {                          // Noise control
+            if (noiseFreq3)
+                DBG_PRINT("CH: %d FREQ: %d\n", channel, frequency[channel]);
+        } else {                          // Noise control
             noise = 0x4000;
             feedback = (value >> 2) & 1;
             noiseFreq3 = (value & 3) == 3;
             frequency[3] = 16 << (value & 3);
+            DBG_PRINT("NOISE FB: %d F3: %d FREQ: %d\n", feedback, noiseFreq3, frequency[3]);
         }
     } else {
         channel = last >> 1;
-        if (last & 1)                   // Attenuation
+        if (last & 1) {                  // Attenuation
             attenuation[channel] = (~value) & 0xF;
-        else if (channel < 3)           // Second write (high frequency)
+            DBG_PRINT("CH: %d VOL: %d #####\n", channel,  attenuation[channel]);
+        } else if (channel < 3) {          // Second write (high frequency)
             frequency[channel] = (frequency[channel] & 0xF) | ((value & 0x3F) << 4);
-        else {
+            if (noiseFreq3)
+                DBG_PRINT("CH: %d FREQ: %d #####\n", channel, frequency[channel]);
+        } else {
             noise = 0x4000;
             feedback = (value >> 2) & 1;
             noiseFreq3 = (value & 3) == 3;
             frequency[3] = 16 << (value & 3);
+            DBG_PRINT("NOISE FB: %d F3: %d FREQ: %d #####\n", feedback, noiseFreq3, frequency[3]);
         }
     }
 }

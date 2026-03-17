@@ -5,6 +5,8 @@
 #include "log.h"
 #include "ftdi.h"
 
+#undef DBG_PRINT
+#define DBG_PRINT(f, ...) {}
 #define DBG_TITLE "\033[1;33mVDP:\033[0m "
 
 #define VRAM                vdp.VRAM
