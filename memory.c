@@ -12,6 +12,7 @@
 
 #define RAM         mem.RAM
 #define RAM_EX      mem.RAM_EX
+#define battery     mem.battery
 #define bankMask    mem.bankMask
 #define frameConfig mem.frameConfig
 
@@ -56,9 +57,10 @@ void writeMemory(unsigned address, uint8_t value) {
             frameConfig[address & 0x03] = value;
 
             if (address == 0xFFFC) {
-                if (value & FRAME2_RAM)
+                if (value & FRAME2_RAM) {
+                    battery = 1;
                     pBank2 = RAM_EX - (value & FRAME2_BANK1 ? 0x4000 : 0x8000);
-                else
+                } else
                     pBank2 = pBank2ROM;
                 if (value & 0xF3)
                     DBG_PRINT("extra bits %02X in Frame control register %04X\n", value, address);
@@ -111,5 +113,43 @@ void loadROM() {
     bankMask = (size / 16384) - 1;
     *(uint32_t*)&frameConfig = 0x02010000;
 
+    battery = 0;
+    char *ext = strrchr(ROMfilename, '.');
+    if (ext)
+        *ext = 0;
+
     printf("OK\n");
+}
+
+void initBattery()
+{
+    int fd;
+    char filename[FILENAME_MAX];
+
+    strcpy(filename, ROMfilename);
+    strcat(filename, ".srm");
+    fd = open(filename, O_RDONLY);
+    if (fd > 0) {
+        read(fd, RAM_EX, 32768);
+        close(fd);
+        printf("Save battery found and restored!\n");
+    }
+}
+
+void saveBattery()
+{
+    int fd;
+    char filename[FILENAME_MAX];
+
+    if (!battery)
+        return;
+
+    strcpy(filename, ROMfilename);
+    strcat(filename, ".srm");
+    fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0664);
+    if (fd > 0) {
+        write(fd, RAM_EX, 32768);
+        close(fd);
+        printf("Save battery updated!\n");
+    }
 }

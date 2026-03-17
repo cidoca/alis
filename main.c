@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
     parserCmdLine(argc, argv);
 
     loadROM();
+    initBattery();
     FTDI_Open();
 
     resetCPU();
@@ -60,6 +61,7 @@ int main(int argc, char **argv) {
     SDLmainLoop();
     SDLdeinit();
 
+    saveBattery();
     FTDI_Close();
 
     return 0;
