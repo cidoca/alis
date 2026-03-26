@@ -484,7 +484,7 @@ void init_SDL(char *filename)
     wanted.freq = 48000;
     wanted.format = AUDIO_U8;
     wanted.channels = 1;
-    wanted.samples = wanted.freq / 60 * 2;
+    wanted.samples = wanted.freq / 60;
     wanted.callback = make_PSG;
     wanted.userdata = NULL;
     if (SDL_OpenAudio(&wanted, NULL) < 0) {

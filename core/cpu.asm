@@ -3024,6 +3024,8 @@ INI0:   add DWORD [rPCx], 2
 ; ***************************************************************************
 GLOBAL _OUTI
 _OUTI:
+        and BYTE [Flag], 1
+        or BYTE [Flag], 2
         movzx esi, WORD [rL]
         inc WORD [rL]
         call read_mem
@@ -3032,10 +3034,9 @@ _OUTI:
         mov edx, [write_io+edx*4]
         call rdx
         dec BYTE [rB]
-        lahf
-        and ah, 0C0h
-        mov BYTE [Flag], ah
-        add DWORD [rPCx], 2
+        jnz OUTI0
+        or BYTE [Flag], 40h
+OUTI0:  add DWORD [rPCx], 2
         add BYTE [TClock], 16
         jmp TLF
 
