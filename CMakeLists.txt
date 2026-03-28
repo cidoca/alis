@@ -4,16 +4,10 @@ project(alis LANGUAGES C)
 
 find_package(SDL2 REQUIRED)
 
-include_directories(${SDL2_INCLUDE_DIR})
-
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -s")
-
 set(SOURCE
     src/cpu.c
     src/ga.c
     src/io.c
-    src/log.c
     src/main.c
     src/memory.c
     src/psg.c
@@ -21,7 +15,15 @@ set(SOURCE
     src/vdp.c
 )
 
+add_compile_options(-Wall)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_link_options(-s)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+    set(SOURCE ${SOURCE} src/log.c)
+    add_compile_options(-DDEBUG -O2)
+endif()
+
 add_executable(alis ${SOURCE})
 
 target_link_libraries(alis ${SDL2_LIBRARIES})
-

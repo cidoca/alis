@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+
 #include "cpu.h"
 #include "vdp.h"
 #include "memory.h"
 
 char o_s[32];
 int rh_pos = 0;
+int dumping = 0;
 
 struct REGS {
     int rIXx;
@@ -59,7 +61,6 @@ void printHistory() {
     }
 }
 
-int dumping = 0;
 void dumpOpcode() {
     rh[rh_pos].rIXx = cpu.rIX;
     rh[rh_pos].rIYx = cpu.rIY;
