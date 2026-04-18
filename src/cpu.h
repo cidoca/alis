@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 struct CPU {
     uint8_t regs[8], regs2[8];
     uint8_t rFlags, rFlags2;
