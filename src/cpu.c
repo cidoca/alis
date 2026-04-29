@@ -2207,7 +2207,7 @@ void executeNextOpcode() {
         // PUSH AF - 11
         case 0xF5:
             writeMemory(--rSP, rA);
-            writeMemory(--rSP, rFlags & ~0x028);
+            writeMemory(--rSP, rFlags);
             END_OPCODE(1, 11)
 
         // OR n - 7 - SZHPNC
