@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -46,7 +47,7 @@
 #define FLAG_PV 0x04            // Parity/overflow
 #define FLAG_N  0x02            // Negative
 #define FLAG_C  0x01            // Carry
-#define FLAG_XX (0x20 | 0x08)   // Must be copied from result
+#define FLAG_XX 0x00 // (0x20 | 0x08)   // Must be copied from result
 
 #define GET_FLAG_S(reg)   ((reg) & (FLAG_S | FLAG_XX))
 #define GET_FLAG_Z(reg)   ((reg) == 0 ? FLAG_Z : 0)
@@ -87,11 +88,15 @@
     ((int16_t)(rHL) >= 0 && (int16_t)(s) < 0 && (int16_t)(rHL - (s) - (rFlags & FLAG_C)) < 0) ? \
     FLAG_PV : 0));
 
+#define COMPARE(VALUE) rFlags = GET_SUB_FLAG_HVNC(VALUE) | ((rA - (VALUE)) & FLAG_S) | \
+    GET_FLAG_Z(rA - (VALUE)) | ((VALUE) & FLAG_XX);
+
 #define WRITE_BACK(LOW, HIGH, TMP) HIGH = TMP >> 8; LOW = TMP & 0xFF;
-#define DEC(LOW, HIGH) { uint16_t tmp = ((HIGH << 8) | LOW) - 1; WRITE_BACK(LOW, HIGH, tmp) }
-#define INC(LOW, HIGH) { uint16_t tmp = ((HIGH << 8) | LOW) + 1; WRITE_BACK(LOW, HIGH, tmp) }
+#define DEC(LOW, HIGH) { const uint16_t tmp = ((HIGH << 8) | LOW) - 1; WRITE_BACK(LOW, HIGH, tmp) }
+#define INC(LOW, HIGH) { const uint16_t tmp = ((HIGH << 8) | LOW) + 1; WRITE_BACK(LOW, HIGH, tmp) }
 
 #define END_OPCODE(pc, clk) rPC += pc; TClock += clk; break;
+#define END_OPCODE_RETURN(pc, clk) rPC += pc; TClock += clk; return;
 
 struct CPU cpu;
 
@@ -435,8 +440,8 @@ void executeNextOpcode() {
 
         // SCF - 4 - HNC
         case 0x37:
-            rFlags &= FLAG_S | FLAG_Z | FLAG_PV | FLAG_XX;
-            rFlags |= FLAG_C;
+            rFlags &= FLAG_S | FLAG_Z | FLAG_PV;
+            rFlags |= (rA & FLAG_XX) | FLAG_C;
             END_OPCODE(1, 4)
 
         // JR C, e - 7/12
@@ -452,8 +457,7 @@ void executeNextOpcode() {
             const unsigned tmpHL = rHL + rSP;
             rFlags = (rFlags & (FLAG_S | FLAG_Z | FLAG_PV)) | (tmpHL > 0xFFFF ? FLAG_C : 0) |
                      ((rHL & 0xFFF) + (rSP & 0xFFF) > 0xFFF ? FLAG_H : 0);
-            rH = tmpHL >> 8;
-            rL = tmpHL & 0xFF;
+            WRITE_BACK(rL, rH, tmpHL)
             rFlags |= rH & FLAG_XX;
             END_OPCODE(1, 11)
         }
@@ -470,7 +474,8 @@ void executeNextOpcode() {
 
         // CCF - 4 - HNC
         case 0x3F:
-            rFlags = (rFlags & (FLAG_S | FLAG_Z | FLAG_PV | FLAG_C | FLAG_XX)) | (rFlags & FLAG_C ? FLAG_H : 0);
+            rFlags = (rFlags & (FLAG_S | FLAG_Z | FLAG_PV | FLAG_C)) |
+                (rFlags & FLAG_C ? FLAG_H : 0) | (rA & FLAG_XX);
             rFlags ^= FLAG_C;
             END_OPCODE(1, 4)
 
@@ -609,13 +614,13 @@ void executeNextOpcode() {
 
         // CP r - 7 - SZHPNC
         case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBF:
-            rFlags = GET_SUB_FLAG_HVNC(regs[opCode0 & 7]) | GET_FLAG_SZ(rA - regs[opCode0 & 7]);
+            COMPARE(regs[opCode0 & 7])
             END_OPCODE(1, 4)
 
         // CP (HL) - 7 - SZHPNC
         case 0xBE: {
             const uint8_t mem = readMemory(rHL);
-            rFlags = GET_SUB_FLAG_HVNC(mem) | GET_FLAG_SZ(rA - mem);
+            COMPARE(mem)
             END_OPCODE(1, 7)
         }
 
@@ -1089,7 +1094,7 @@ void executeNextOpcode() {
                     const unsigned addr = (readMemory(rPC + 3) << 8) | readMemory(rPC + 2);
                     writeMemory(addr, index & 0xFF);
                     writeMemory(addr + 1, index >> 8);
-                    END_OPCODE(4, 20)
+                    END_OPCODE_RETURN(4, 20)
                 }
 
                 // INC Ii - 10
@@ -1163,7 +1168,7 @@ void executeNextOpcode() {
                     mem++;
                     rFlags |= GET_FLAG_SZ(mem) | ((mem & 0x0F) == 0 ? FLAG_H : 0);
                     writeMemory(addr, mem);
-                    END_OPCODE(3, 23)
+                    END_OPCODE_RETURN(3, 23)
                 }
 
                 // DEC (Ii+d) - 23 - SZHPN
@@ -1174,13 +1179,13 @@ void executeNextOpcode() {
                     mem--;
                     rFlags |= GET_FLAG_SZ(mem) | ((mem & 0x0F) == 15 ? FLAG_H : 0);
                     writeMemory(addr, mem);
-                    END_OPCODE(3, 23)
+                    END_OPCODE_RETURN(3, 23)
                 }
 
                 // LD (Ii+d), n - 19
                 case 0x36:
                     writeMemory(index + (int8_t)readMemory(rPC + 2), readMemory(rPC + 3));
-                    END_OPCODE(4, 19)
+                    END_OPCODE_RETURN(4, 19)
 
                 // ADD Ii, SP - 15 - HPNC
                 case 0x39:
@@ -1193,17 +1198,17 @@ void executeNextOpcode() {
                 // LD r, IiH - 8
                 case 0x44: case 0x4C: case 0x54: case 0x5C: case 0x7C:
                     regs[(opCode1 >> 3) & 7] = index >> 8;
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // LD r, IiL - 8
                 case 0x45: case 0x4D: case 0x55: case 0x5D: case 0x7D:
                     regs[(opCode1 >> 3) & 7] = index & 0xFF;
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // LD r, (Ii+d) - 19
                 case 0x46: case 0x4E: case 0x56: case 0x5E: case 0x66: case 0x6E: case 0x7E:
                     regs[(opCode1 >> 3) & 7] = readMemory(index + (int8_t)readMemory(rPC + 2));
-                    END_OPCODE(3, 19)
+                    END_OPCODE_RETURN(3, 19)
 
                 // LD IiH, r - 8
                 case 0x60: case 0x61: case 0x62: case 0x63: case 0x67:
@@ -1212,7 +1217,7 @@ void executeNextOpcode() {
 
                 // LD IiH, IiH - 8
                 case 0x64:
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // LD IiH, IiL - 8
                 case 0x65:
@@ -1231,26 +1236,26 @@ void executeNextOpcode() {
 
                 // LD IiL, IiL - 8
                 case 0x6D:
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // LD (Ii+d), r - 19
                 case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77:
                     writeMemory(index + (int8_t)readMemory(rPC + 2), regs[opCode1 & 7]);
-                    END_OPCODE(3, 19)
+                    END_OPCODE_RETURN(3, 19)
 
                 // ADD A, IiH - 8 - SZHPNC
                 case 0x84:
                     rFlags = GET_ADD_FLAG_HVNC(index >> 8);
                     rA += index >> 8;
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // ADD A, IiL - 8 - SZHPNC
                 case 0x85:
                     rFlags = GET_ADD_FLAG_HVNC(index & 0xFF);
                     rA += index & 0xFF;
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // ADD A, (Ii+d) - 19 - SZHPNC
                 case 0x86: {
@@ -1258,7 +1263,7 @@ void executeNextOpcode() {
                     rFlags = GET_ADD_FLAG_HVNC(mem);
                     rA += mem;
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(3, 19)
+                    END_OPCODE_RETURN(3, 19)
                 }
 
                 // ADC A, IiH - 8 - SZHPNC
@@ -1267,7 +1272,7 @@ void executeNextOpcode() {
                     rFlags = GET_ADC_FLAG_HVNC(index >> 8);
                     rA += (index >> 8) + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
                 }
 
                 // ADC A, IiL - 8 - SZHPNC
@@ -1276,7 +1281,7 @@ void executeNextOpcode() {
                     rFlags = GET_ADC_FLAG_HVNC(index & 0xFF);
                     rA += (index & 0xFF) + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
                 }
 
                 // ADC A, (Ii+d) - 19 - SZHPNC
@@ -1286,7 +1291,7 @@ void executeNextOpcode() {
                     rFlags = GET_ADC_FLAG_HVNC(addr);
                     rA += addr + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(3, 19)
+                    END_OPCODE_RETURN(3, 19)
                 }
 
                 // SUB IiH - 8 - SZHPNC
@@ -1294,14 +1299,14 @@ void executeNextOpcode() {
                     rFlags = GET_SUB_FLAG_HVNC(index >> 8);
                     rA -= index >> 8;
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // SUB IiL - 8 - SZHPNC
                 case 0x95:
                     rFlags = GET_SUB_FLAG_HVNC(index & 0xFF);
                     rA -= index & 0xFF;
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // SUB (Ii+d) - 19 - SZHPNC
                 case 0x96: {
@@ -1309,7 +1314,7 @@ void executeNextOpcode() {
                     rFlags = GET_SUB_FLAG_HVNC(mem);
                     rA -= mem;
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(3, 19)
+                    END_OPCODE_RETURN(3, 19)
                 }
 
                 // SBC A, IiH - 8 - SZHPNC
@@ -1318,7 +1323,7 @@ void executeNextOpcode() {
                     rFlags = GET_SBC_FLAG_HVNC(index >> 8);
                     rA -= (index >> 8) + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
                 }
 
                 // SBC A, IiL - 8 - SZHPNC
@@ -1327,7 +1332,7 @@ void executeNextOpcode() {
                     rFlags = GET_SBC_FLAG_HVNC(index & 0xFF);
                     rA -= (index & 0xFF) + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
                 }
 
                 // SBC A, (Ii+d) - 19 - SZHPNC
@@ -1337,82 +1342,82 @@ void executeNextOpcode() {
                     rFlags = GET_SBC_FLAG_HVNC(addr);
                     rA -= addr + (tmpFlags & FLAG_C);
                     rFlags |= GET_FLAG_SZ(rA);
-                    END_OPCODE(3, 19)
+                    END_OPCODE_RETURN(3, 19)
                 }
 
                 // AND IiH - 8 - SZHPNC
                 case 0xA4:
                     rA &= index >> 8;
                     rFlags = FLAG_H | GET_FLAG_SZP(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // AND IiL - 8 SZHPNC
                 case 0xA5:
                     rA &= index & 0xFF;
                     rFlags = FLAG_H | GET_FLAG_SZP(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // AND (Ii+d) - 19 - SZHPNC
                 case 0xA6:
                     rA &= readMemory(index + (int8_t)readMemory(rPC + 2));
                     rFlags = FLAG_H | GET_FLAG_SZP(rA);
-                    END_OPCODE(3, 19)
+                    END_OPCODE_RETURN(3, 19)
 
                 // XOR IiH - 8 - SZHPNC
                 case 0xAC:
                     rA ^= index >> 8;
                     rFlags = GET_FLAG_SZP(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // XOR IiL - 8 - SZHPNC
                 case 0xAD:
                     rA ^= index & 0xFF;
                     rFlags = GET_FLAG_SZP(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // XOR (Ii+d) - 19 - SZHPNC
                 case 0xAE:
                     rA ^= readMemory(index + (int8_t)readMemory(rPC + 2));
                     rFlags = GET_FLAG_SZP(rA);
-                    END_OPCODE(3, 19)
+                    END_OPCODE_RETURN(3, 19)
 
                 // OR IiH - 8 - SZHPNC
                 case 0xB4:
                     rA |= (index >> 8) & 0xFF;
                     rFlags = GET_FLAG_SZP(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // OR IiL - 8 - SZHPNC
                 case 0xB5:
                     rA |= index & 0xFF;
                     rFlags = GET_FLAG_SZP(rA);
-                    END_OPCODE(2, 8)
+                    END_OPCODE_RETURN(2, 8)
 
                 // OR (Ii+d) - 19 - SZHPNC
                 case 0xB6:
                     rA |= readMemory(index + (int8_t)readMemory(rPC + 2));
                     rFlags = GET_FLAG_SZP(rA);
-                    END_OPCODE(3, 19)
+                    END_OPCODE_RETURN(3, 19)
 
                 // CP IiH - 8 - SZHPNC
                 case 0xBC: {
                     const uint8_t IiH = index >> 8;
-                    rFlags = GET_SUB_FLAG_HVNC(IiH) | GET_FLAG_SZ(rA - IiH);
-                    END_OPCODE(2, 8)
+                    COMPARE(IiH)
+                    END_OPCODE_RETURN(2, 8)
                 }
 
                 // CP IiL - 8 - SZHPNC
                 case 0xBD: {
                     const uint8_t IiL = index & 0xFF;
-                    rFlags = GET_SUB_FLAG_HVNC(IiL) | GET_FLAG_SZ(rA - IiL);
-                    END_OPCODE(2, 8)
+                    COMPARE(IiL)
+                    END_OPCODE_RETURN(2, 8)
                 }
 
                 // CP (Ii+d) - 19 - SZHPNC
                 case 0xBE: {
                     const uint8_t mem = readMemory(index + (int8_t)readMemory(rPC + 2));
-                    rFlags = GET_SUB_FLAG_HVNC(mem) | GET_FLAG_SZ(rA - mem);
-                    END_OPCODE(3, 19)
+                    COMPARE(mem)
+                    END_OPCODE_RETURN(3, 19)
                 }
 
                 // Prefix DD/FD CB
@@ -1468,8 +1473,7 @@ void executeNextOpcode() {
                         // SLL (Ii+d), #r# - 23 - SZHPNC
                         case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
                             rFlags = mem >> 7;
-                            mem <<= 1;
-                            mem++;
+                            mem = (mem << 1) | 1;
                             rFlags |= GET_FLAG_SZP(mem);
                             break;
 
@@ -1492,7 +1496,7 @@ void executeNextOpcode() {
                             mem = mem & (1 << ((opCode3 >> 3) & 7));
                             rFlags = (mem & FLAG_S) | GET_FLAG_Z(mem) | GET_FLAG_P(mem) |
                                      FLAG_H | ((addr >> 8) & FLAG_XX) | (rFlags & FLAG_C);
-                            END_OPCODE(4, 20)
+                            END_OPCODE_RETURN(4, 20)
 
                         // RES b, (Ii+d), #r# - 23 -
                         case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: case 0x87:
@@ -1519,15 +1523,10 @@ void executeNextOpcode() {
                             break;
                     }
 
-                    if ((opCode3 & 0xC0) != 0x40) {     // Not BIT instruction
-                        writeMemory(addr, mem);
-                        if ((opCode3 & 7) != 6)
-                            regs[opCode3 & 7] = mem;
-                        rPC += 4;
-                        TClock += 23;
-                    }
-
-                    break;
+                    writeMemory(addr, mem);
+                    if ((opCode3 & 7) != 6) // Undocument opcode
+                        regs[opCode3 & 7] = mem;
+                    END_OPCODE_RETURN(4, 23)
                 }
 
                 // POP Ii - 14
@@ -1549,18 +1548,18 @@ void executeNextOpcode() {
                 case 0xE5:
                     writeMemory(--rSP, index >> 8);
                     writeMemory(--rSP, index & 0xFF);
-                    END_OPCODE(2, 15)
+                    END_OPCODE_RETURN(2, 15)
 
                 // JP (Ii) - 8
                 case 0xE9:
                     rPC = index;
                     TClock += 8;
-                    break;
+                    return;
 
                 // LD SP, Ii - 10
                 case 0xF9:
                     rSP = index;
-                    END_OPCODE(2, 10)
+                    END_OPCODE_RETURN(2, 10)
 
                 // Basic instruction
                 default:
@@ -1724,7 +1723,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL - rBC - (rFlags & FLAG_C);
                     rFlags = GET_SBC16_FLAG_HVNC(rBC);
                     WRITE_BACK(rL, rH, tmpHL)
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (tmpHL == 0 ? FLAG_Z : 0);
+                    rFlags |= GET_FLAG_S(rH) | GET_FLAG_Z(tmpHL);
                     END_OPCODE(2, 15)
                 }
 
@@ -1737,7 +1736,7 @@ void executeNextOpcode() {
                 }
 
                 // NEG - 8 - SZHPNC
-                case 0x44:
+                case 0x44: case 0x4C: case 0x54: case 0x5C: case 0x64: case 0x6C: case 0x74: case 0x7C:
                     rFlags = FLAG_N | ((rA & 15) > 0 ? FLAG_H : 0) | (rA != 0 ? FLAG_C : 0);
                     if (rA != 0x80)
                         rA = -rA;
@@ -1747,7 +1746,7 @@ void executeNextOpcode() {
                     END_OPCODE(2, 8)
 
                 // RETN - 14
-                case 0x45:
+                case 0x45: case 0x55: case 0x5D: case 0x65: case 0x6D: case 0x75: case 0x7D:
                     IFF1 = IFF2;
                     rPC = readMemory(rSP++);
                     rPC |= readMemory(rSP++) << 8;
@@ -1755,7 +1754,7 @@ void executeNextOpcode() {
                     break;
 
                 // IM 0 - 8
-                case 0x46:
+                case 0x46: case 0x4E: case 066: case 0x6E:
                     printf("Interrupt mode 0 not supported !!!\n");
                     exit(1);
 
@@ -1769,7 +1768,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL + rBC + (rFlags & FLAG_C);
                     rFlags = GET_ADC16_FLAG_HVNC(rBC);
                     WRITE_BACK(rL, rH, tmpHL)
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
+                    rFlags |= GET_FLAG_S(rH) | GET_FLAG_Z(tmpHL);
                     END_OPCODE(2, 15)
                 }
 
@@ -1782,7 +1781,7 @@ void executeNextOpcode() {
                 }
 
                 // RETI - 14
-                case 0x4D:
+                case 0x4D:  // TODO: Copy IFF2 to IFF1 like RETN ???
                     rPC = readMemory(rSP++);
                     rPC |= readMemory(rSP++) << 8;
                     TClock += 14;
@@ -1799,7 +1798,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL - rDE - (rFlags & FLAG_C);
                     rFlags = GET_SBC16_FLAG_HVNC(rDE);
                     WRITE_BACK(rL, rH, tmpHL)
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
+                    rFlags |= GET_FLAG_S(rH) | GET_FLAG_Z(tmpHL);
                     END_OPCODE(2, 15)
                 }
 
@@ -1812,7 +1811,7 @@ void executeNextOpcode() {
                 }
 
                 // IM 1 - 8
-                case 0x56:
+                case 0x56: case 0x76:
                     im = 1;
                     END_OPCODE(2, 8)
 
@@ -1827,7 +1826,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL + rDE + (rFlags & FLAG_C);
                     rFlags = GET_ADC16_FLAG_HVNC(rDE);
                     WRITE_BACK(rL, rH, tmpHL)
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
+                    rFlags |= GET_FLAG_S(rH) | GET_FLAG_Z(tmpHL);
                     END_OPCODE(2, 15)
                 }
 
@@ -1840,7 +1839,7 @@ void executeNextOpcode() {
                 }
 
                 // IM 2 - 8
-                case 0x5E:
+                case 0x5E: case 0x7E:
                     im = 2;
                     END_OPCODE(2, 8)
 
@@ -1855,7 +1854,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL - rHL - (rFlags & FLAG_C);
                     rFlags = GET_SBC16_FLAG_HVNC(rHL);
                     WRITE_BACK(rL, rH, tmpHL)
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
+                    rFlags |= GET_FLAG_S(rH) | GET_FLAG_Z(tmpHL);
                     END_OPCODE(2, 15)
                 }
 
@@ -1882,7 +1881,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL + rHL + (rFlags & FLAG_C);
                     rFlags = GET_ADC16_FLAG_HVNC(rHL);
                     WRITE_BACK(rL, rH, tmpHL)
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
+                    rFlags |= GET_FLAG_S(rH) | GET_FLAG_Z(tmpHL);
                     END_OPCODE(2, 15)
                 }
 
@@ -1904,12 +1903,24 @@ void executeNextOpcode() {
                     END_OPCODE(2, 18)
                 }
 
+                // IN (C) - 12
+                case 0x70: {
+                    const uint8_t tmp = readIO(rC);
+                    rFlags = GET_FLAG_SZP(tmp) | (rFlags & FLAG_C);
+                    END_OPCODE(2, 12)
+                }
+
+                // OUT (C), 0 - 12
+                case 0x71:
+                    writeIO(rC, 0);
+                    END_OPCODE(2, 12)
+
                 // SBC HL, SP - 15
                 case 0x72: {
                     const unsigned tmpHL = rHL - rSP - (rFlags & FLAG_C);
                     rFlags = GET_SBC16_FLAG_HVNC(rSP);
                     WRITE_BACK(rL, rH, tmpHL)
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
+                    rFlags |= GET_FLAG_S(rH) | GET_FLAG_Z(tmpHL);
                     END_OPCODE(2, 15)
                 }
 
@@ -1926,7 +1937,7 @@ void executeNextOpcode() {
                     const unsigned tmpHL = rHL + rSP + (rFlags & FLAG_C);
                     rFlags = GET_ADC16_FLAG_HVNC(rSP);
                     WRITE_BACK(rL, rH, tmpHL)
-                    rFlags |= (rH & (FLAG_S | FLAG_XX)) | (!rHL ? FLAG_Z : 0);
+                    rFlags |= GET_FLAG_S(rH) | GET_FLAG_Z(rHL);
                     END_OPCODE(2, 15)
                 }
 
@@ -2143,11 +2154,9 @@ void executeNextOpcode() {
                         break;
                     }
 
-                // Not implemented yet
+                // NOP - 8
                 default:
-                    DBG_PRINT_HISTORY
-                    printf("Opcode %02X %02X not implemented !!!\n", opCode0, opCode1);
-                    exit(1);
+                    END_OPCODE(2, 8)
             }
 
             break;
@@ -2266,7 +2275,7 @@ void executeNextOpcode() {
         // CP n - 7 - SZHPNC
         case 0xFE: {
             const uint8_t imm = readMemory(rPC + 1);
-            rFlags = GET_SUB_FLAG_HVNC(imm) | GET_FLAG_SZ(rA - imm);
+            COMPARE(imm)
             END_OPCODE(2, 7)
         }
     }
