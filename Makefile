@@ -43,7 +43,7 @@ $(BUILD)/io.o: $(SRC)/io.c $(SRC)/vdp.h $(SRC)/psg.h $(SRC)/ga.h $(SRC)/log.h #$
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/memory.o: $(SRC)/memory.c $(SRC)/memory.h $(SRC)/log.h
+$(BUILD)/memory.o: $(SRC)/memory.c $(SRC)/cpu.h $(SRC)/memory.h $(SRC)/psg.h $(SRC)/vdp.h $(SRC)/log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
@@ -59,7 +59,7 @@ $(BUILD)/ga.o: $(SRC)/ga.c $(SRC)/log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/sdl.o: $(SRC)/sdl.c $(SRC)/cpu.h $(SRC)/psg.h $(SRC)/vdp.h $(SRC)/ga.h $(SRC)/log.h
+$(BUILD)/sdl.o: $(SRC)/sdl.c $(SRC)/cpu.h $(SRC)/psg.h $(SRC)/vdp.h $(SRC)/memory.h $(SRC)/ga.h $(SRC)/log.h
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 

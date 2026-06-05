@@ -1,7 +1,10 @@
+#include <stdbool.h>
 #include <SDL2/SDL.h>
+
 #include "cpu.h"
 #include "psg.h"
 #include "ga.h"
+#include "memory.h"
 #include "vdp.h"
 #include "log.h"
 
@@ -24,8 +27,8 @@ void SDLinit() {
         goto error;
 
     // Create window and texture
-    win = SDL_CreateWindow("Alis", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 256 * 3,
-        SCREEN_HEIGHT * 3, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    win = SDL_CreateWindow("Alis", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 256 * 4,
+        SCREEN_HEIGHT * 4, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!win)
         goto error;
 
@@ -78,7 +81,8 @@ void SDLdeinit() {
 }
 
 void mapJoystick() {
-    static uint8_t pauseFF = 0;
+    bool new_save_load = false;
+    static bool pauseFF = false, previous_save_load = false;
 
     joyP1 = joyP2 = 0xFF;
 
@@ -101,11 +105,14 @@ void mapJoystick() {
         intNMI();
     pauseFF = keys[SDL_SCANCODE_SPACE];
 
-#ifdef DEBUG
-    if (keys[SDL_SCANCODE_F12])
-        dumping = 1;
-#endif
-
+    for (int i = 0; i < 8; i++) {
+        if (keys[SDL_SCANCODE_F5 + i]) {
+            new_save_load = true;
+            if (!previous_save_load)
+                save_load_game(i);
+        }
+    }
+    previous_save_load = new_save_load;
 }
 
 void SDLmainLoop() {

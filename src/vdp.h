@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 //#define DRAW_TILES
 #define MAX_SPRITES         32
 
@@ -20,3 +22,4 @@ uint8_t readVDPData();
 uint8_t readVDPStatus();
 void writeVDPData(uint8_t value);
 void writeVDPCommand(uint8_t value);
+void updateVDPafterLoading();

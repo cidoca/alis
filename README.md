@@ -15,13 +15,14 @@ Phantasy Star.
 ## Missing features :)
 You will be able to enjoy these features while playing in some future:
 
-* **Save/Load** - Save and load game state any time
 * **Record/Play** - Record and play user input from keyboard or joystick
 * **CPU speed** - Change CPU speed between 12% and 800%
 * **Rewind** - Back to past!!! You can rewind your game until the last
 thirty seconds
 
 ## Keys
+* **F5-F8** - Save game in slots between 1 and 4;
+* **F9-F12** - Load game from slots between 1 and 4;
 * **ESCAPE** - Reset;
 * **SPACE** - Pause;
 * **Z** - Joystick 1 button 1;

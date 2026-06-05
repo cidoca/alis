@@ -5,26 +5,28 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+
+#include "cpu.h"
 #include "memory.h"
+#include "psg.h"
+#include "vdp.h"
 #include "log.h"
 
 #undef DBG_PRINT
 #define DBG_PRINT(f, ...) {}
 #define DBG_TITLE "\033[1;34mMEMORY:\033[0m "
 
-#define RAM         mem.RAM
-#define RAM_EX      mem.RAM_EX
-#define battery     mem.battery
-#define bankMask    mem.bankMask
-#define frameConfig mem.frameConfig
+#define RAM             mem.RAM
+#define frameConfig     mem.frameConfig
+#define battery         mem.battery
 
 #define FRAME2_RAM      0x08    // 0 = ROM, 1 = RAM
 #define FRAME2_BANK1    0x04    // 0 = bank0, 1 = bank1
 
 struct MEMORY mem;
-uint8_t ROM[1024 * 1024];
-uint8_t *pBank0 = ROM, *pBank1 = ROM, *pBank2 = ROM, *pBank2ROM = ROM;
 char ROMfilename[128] = "";
+uint8_t ROM[1024 * 1024], RAM_EX[32 * 1024];
+uint8_t *pBank0 = ROM, *pBank1 = ROM, *pBank2 = ROM, *pBank2ROM = ROM;
 
 const uint8_t readMemory(unsigned address) {
     if (address < 0x0400)
@@ -67,7 +69,7 @@ void writeMemory(unsigned address, uint8_t value) {
                 if (value & 0xF3)
                     DBG_PRINT("extra bits %02X in Frame control register %04X\n", value, address);
             } else {
-                unsigned offset = (value & bankMask) << 14;
+                unsigned offset = (value & 0x3F) << 14;
 
                 if (address == 0xFFFD)
                     pBank0 = ROM + offset;
@@ -112,10 +114,13 @@ void loadROM() {
 
     if (size & 0x200)
         memcpy(ROM, ROM + 512, size - 512);
-    bankMask = (size / 16384) - 1;
-    *(uint32_t*)&frameConfig = 0x02010000;
 
     battery = 0;
+    writeMemory(0xFFFC, 0);
+    writeMemory(0xFFFD, 0);
+    writeMemory(0xFFFE, 1);
+    writeMemory(0xFFFF, 2);
+
     char *ext = strrchr(ROMfilename, '.');
     if (ext)
         *ext = 0;
@@ -132,9 +137,11 @@ void initBattery()
     strcat(filename, ".srm");
     fd = open(filename, O_RDONLY);
     if (fd > 0) {
-        read(fd, RAM_EX, 32768);
+        if (read(fd, RAM_EX, 32768) == 32768)
+            printf("Saved battery found and restored!\n");
+        else
+            printf("Error trying to restore saved battery!\n");
         close(fd);
-        printf("Save battery found and restored!\n");
     }
 }
 
@@ -150,8 +157,87 @@ void saveBattery()
     strcat(filename, ".srm");
     fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0664);
     if (fd > 0) {
-        write(fd, RAM_EX, 32768);
+        if (write(fd, RAM_EX, 32768) == 32768)
+            printf("Save battery updated!\n");
+        else
+            printf("Error trying to save the battery!\n");
         close(fd);
-        printf("Save battery updated!\n");
     }
+}
+
+void save_game(int slot) {
+    int fd;
+    char filename[FILENAME_MAX];
+
+    snprintf(filename, FILENAME_MAX, "%s.sa%d", ROMfilename, slot);
+    fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0664);
+    if (fd > 0) {
+        if (write(fd, &cpu, sizeof(cpu)) != sizeof(cpu)) goto error_saving;
+        if (write(fd, &psg, sizeof(psg)) != sizeof(psg)) goto error_saving;
+        if (write(fd, &vdp, sizeof(vdp)) != sizeof(vdp)) goto error_saving;
+        if (write(fd, &mem, sizeof(mem)) != sizeof(mem)) goto error_saving;
+        if (battery)
+            if (write(fd, RAM_EX, sizeof(RAM_EX)) != sizeof(RAM_EX)) goto error_saving;
+
+        close(fd);
+        return;
+    }
+
+error_saving:
+    printf("Not possible to save game in %s\n", filename);
+    if (fd > 0)
+        close(fd);
+}
+
+#undef battery
+
+void load_game(int slot) {
+    int fd;
+    char filename[FILENAME_MAX];
+    struct CPU cpu_tmp;
+    struct PSG psg_tmp;
+    struct VDP vdp_tmp;
+    struct MEMORY mem_tmp;
+    char ram_ex_tmp[sizeof(RAM_EX)];
+
+    snprintf(filename, FILENAME_MAX, "%s.sa%d", ROMfilename, slot);
+    fd = open(filename, O_RDONLY);
+    if (fd > 0) {
+        if (read(fd, &cpu_tmp, sizeof(cpu_tmp)) != sizeof(cpu_tmp)) goto error_loading;
+        if (read(fd, &psg_tmp, sizeof(psg_tmp)) != sizeof(psg_tmp)) goto error_loading;
+        if (read(fd, &vdp_tmp, sizeof(vdp_tmp)) != sizeof(vdp_tmp)) goto error_loading;
+        if (read(fd, &mem_tmp, sizeof(mem_tmp)) != sizeof(mem_tmp)) goto error_loading;
+        if (mem_tmp.battery)
+            if (read(fd, ram_ex_tmp, sizeof(ram_ex_tmp)) != sizeof(ram_ex_tmp)) goto error_loading;
+
+        close(fd);
+
+        memcpy(&cpu, &cpu_tmp, sizeof(cpu));
+        memcpy(&psg, &psg_tmp, sizeof(psg));
+        memcpy(&vdp, &vdp_tmp, sizeof(vdp));
+        memcpy(&mem, &mem_tmp, sizeof(mem));
+        if (mem_tmp.battery)
+            memcpy(&RAM_EX, &ram_ex_tmp, sizeof(RAM_EX));
+
+        writeMemory(0xFFFC, frameConfig[0]);
+        writeMemory(0xFFFD, frameConfig[1]);
+        writeMemory(0xFFFE, frameConfig[2]);
+        writeMemory(0xFFFF, frameConfig[3]);
+
+        updateVDPafterLoading();
+
+        return;
+    }
+
+error_loading:
+    printf("Not possible to load game in %s\n", filename);
+    if (fd > 0)
+        close(fd);
+}
+
+void save_load_game(int slot) {
+    if (slot < 4)
+        save_game(slot);
+    else
+        load_game(slot - 4);
 }

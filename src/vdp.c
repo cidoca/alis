@@ -55,7 +55,7 @@ uint16_t *pNameTable = (uint16_t*)VRAM;
 int VDPscanLine, VDPmaxSprites = 8, PALmode = 0;
 uint8_t *pSpriteAttrTable = VRAM, spritePos[MAX_SPRITES], spriteCount;
 uint32_t spritePattern[MAX_SPRITES], *pSpritePatternTable = (uint32_t*)VRAM;
-uint32_t VDPpalette[64] = {
+const uint32_t VDPpalette[64] = {
     0x000000, 0x550000, 0xAA0000, 0xFF0000, 0x005500, 0x555500, 0xAA5500, 0xFF5500,
     0x00AA00, 0x55AA00, 0xAAAA00, 0xFFAA00, 0x00FF00, 0x55FF00, 0xAAFF00, 0xFFFF00,
     0x000055, 0x550055, 0xAA0055, 0xFF0055, 0x005555, 0x555555, 0xAA5555, 0xFF5555,
@@ -435,4 +435,19 @@ void writeVDPCommand(uint8_t value) {
     }
 
     commandFF = !commandFF;
+}
+
+void updateVDPafterLoading() {
+    uint8_t lv = lowValue;
+
+    lowValue = VDP1;
+    updateVDPregisters(1);
+    lowValue = nameTable;
+    updateVDPregisters(2);
+    lowValue = spriteAttrTable;
+    updateVDPregisters(5);
+    lowValue = spritePatternTable;
+    updateVDPregisters(6);
+
+    lowValue = lv;
 }
